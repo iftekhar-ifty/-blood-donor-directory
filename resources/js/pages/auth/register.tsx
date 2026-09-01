@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { Check, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import AvailabilityPicker from '@/components/donor/availability-picker';
@@ -13,7 +13,7 @@ import {
 } from '@/components/donor/form-styles';
 import InputError from '@/components/input-error';
 import LocationSelects from '@/components/donor/location-selects';
-import type { UnionOption, VillageOption } from '@/components/donor/types';
+import type { UnionOption, UpazilaOption, VillageOption } from '@/components/donor/types';
 import { login as loginRoute } from '@/routes';
 import { store as registerStore } from '@/routes/register';
 import { check as usernameCheckRoute } from '@/routes/username';
@@ -22,9 +22,11 @@ import { cn } from '@/lib/utils';
 type UsernameStatus = 'idle' | 'short' | 'taken' | 'available' | 'checking';
 
 export default function Register({
+    upazilas,
     unions,
     villages,
 }: {
+    upazilas: UpazilaOption[];
     unions: UnionOption[];
     villages: VillageOption[];
 }) {
@@ -32,10 +34,15 @@ export default function Register({
     const [available, setAvailable] = useState(true);
     const [unionId, setUnionId] = useState('');
     const [villageId, setVillageId] = useState('');
+    const [knownVillages, setKnownVillages] = useState(villages);
 
     const [username, setUsername] = useState('');
     const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Shared referral links carry ?ref=CODE
+    const prefilledReferralCode = new URL(usePage().url, window.location.origin)
+        .searchParams.get('ref');
 
     useEffect(() => {
         if (timer.current) {
@@ -76,7 +83,7 @@ export default function Register({
             <Head title="Become a Blood Donor" />
 
             <div className="min-h-screen bg-page">
-                <DonorPageHeader title="Become a Blood Donor" />
+                <DonorPageHeader title="Become a Blood Donor" backHref="/" />
 
                 <div className="px-4 py-4">
                     <p className="mb-5 text-[13.5px] leading-relaxed text-ink-soft">
@@ -181,12 +188,16 @@ export default function Register({
                                 </div>
                                 <div className={cn(sectionCardClass, 'mb-4')}>
                                     <LocationSelects
+                                        upazilas={upazilas}
                                         unions={unions}
-                                        villages={villages}
+                                        villages={knownVillages}
                                         unionId={unionId}
                                         villageId={villageId}
                                         onUnionChange={setUnionId}
                                         onVillageChange={setVillageId}
+                                        onVillageCreated={(village) =>
+                                            setKnownVillages((current) => [...current, village])
+                                        }
                                     />
                                 </div>
 
@@ -211,6 +222,27 @@ export default function Register({
                                     <AvailabilityPicker value={available} onChange={setAvailable} />
                                 </div>
 
+                                <div className={sectionLabelClass}>Referral (optional)</div>
+                                <div className="mb-4 rounded-lg border border-line bg-white p-3.5">
+                                    <label htmlFor="referral_code" className={labelClass}>
+                                        Referral Code
+                                    </label>
+                                    <input
+                                        id="referral_code"
+                                        type="text"
+                                        name="referral_code"
+                                        autoComplete="off"
+                                        defaultValue={prefilledReferralCode ?? ''}
+                                        placeholder="e.g. 7KD2M9XA"
+                                        className={`${inputClass} font-mono uppercase`}
+                                    />
+                                    <p className="mt-1.5 text-[12px] leading-relaxed text-ink-soft">
+                                        Did another donor invite you? Enter their code to
+                                        credit them.
+                                    </p>
+                                    <InputError message={errors.referral_code} />
+                                </div>
+
                                 <button
                                     type="submit"
                                     disabled={processing}
@@ -222,13 +254,13 @@ export default function Register({
                         )}
                     </Form>
 
-                    <a
+                    <Link
                         href={loginRoute().url}
                         className="block w-full py-2 text-center text-[13px] text-ink-soft"
                     >
                         Already have an account?{' '}
                         <span className="font-semibold text-blood">Login</span>
-                    </a>
+                    </Link>
                 </div>
             </div>
         </>

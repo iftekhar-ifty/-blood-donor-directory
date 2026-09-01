@@ -1,14 +1,17 @@
-import { router } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { goBack } from '@/lib/back';
 
 export default function DonorPageHeader({
     title,
     back = true,
+    backHref = '/donors',
     action,
 }: {
     title: string;
     back?: boolean;
+    /** Where the back button goes when there is no in-app history (deep link / direct load) */
+    backHref?: string;
     action?: ReactNode;
 }) {
     return (
@@ -17,13 +20,7 @@ export default function DonorPageHeader({
                 {back && (
                     <button
                         type="button"
-                        onClick={() => {
-                            if (window.history.length > 1) {
-                                router.back();
-                            } else {
-                                router.get('/donors');
-                            }
-                        }}
+                        onClick={() => goBack(backHref)}
                         aria-label="Go back"
                         className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-line-soft"
                     >

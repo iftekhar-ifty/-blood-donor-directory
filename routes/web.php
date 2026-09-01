@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DonorController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\VillageController;
 use Illuminate\Support\Facades\Route;
 
 // Splash / welcome — authed users go straight to the directory
@@ -11,6 +12,12 @@ Route::get('/', [AuthController::class, 'welcome'])->name('home');
 // Live username availability feedback for the register form
 Route::get('username-check', [AuthController::class, 'checkUsername'])
     ->name('username.check');
+
+// Village catalog grows as donors add their own — guests need this on the
+// register form, so it is throttled rather than auth-gated
+Route::post('villages', [VillageController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('villages.store');
 
 Route::middleware(['auth'])->group(function () {
     // Donor directory

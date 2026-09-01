@@ -13,7 +13,13 @@ import { cn } from '@/lib/utils';
 
 const DONATION_TYPES: DonationType[] = ['Whole Blood', 'Platelets', 'Plasma'];
 
-export default function ProfileDonations({ donations }: { donations: Donation[] }) {
+export default function ProfileDonations({
+    donations,
+    eligibility,
+}: {
+    donations: Donation[];
+    eligibility: { eligible_now: boolean; next_eligible_date: string | null };
+}) {
     const flash = (usePage().props as { flash?: { success?: string } }).flash;
     const [addOpen, setAddOpen] = useState(
         // "Add Donation Record" on the profile links here with ?add=1
@@ -69,6 +75,21 @@ export default function ProfileDonations({ donations }: { donations: Donation[] 
                                     Last Donation
                                 </div>
                             </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between border-t border-line-soft pt-3">
+                            <span className="text-[12.5px] text-ink-soft">
+                                Next Eligible Donation
+                            </span>
+                            {eligibility.eligible_now ? (
+                                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-good">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-good" />
+                                    Eligible now
+                                </span>
+                            ) : (
+                                <span className="font-mono text-[13px] font-semibold text-ink">
+                                    {formatDate(eligibility.next_eligible_date)}
+                                </span>
+                            )}
                         </div>
                     </div>
 
@@ -141,7 +162,12 @@ export default function ProfileDonations({ donations }: { donations: Donation[] 
 
             {/* Add donation sheet */}
             <BottomSheet open={addOpen} onClose={() => setAddOpen(false)} title="Add Donation Record">
-                <Form {...storeDonationRoute.form()} className="space-y-3" resetOnSuccess>
+                <Form
+                    {...storeDonationRoute.form()}
+                    className="space-y-3"
+                    resetOnSuccess
+                    onSuccess={() => setAddOpen(false)}
+                >
                     {({ processing, errors }) => (
                         <>
                             <input type="hidden" name="donation_type" value={donationType} />

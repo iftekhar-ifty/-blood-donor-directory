@@ -30,8 +30,9 @@ export default function DonorCard({ donor }: { donor: PublicDonor }) {
                     <div className="mt-1 flex items-center gap-1 text-[12.5px] text-ink-soft">
                         <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                         <span className="truncate">
-                            {[donor.village, donor.union].filter(Boolean).join(', ') ||
-                                'Location not set'}
+                            {[donor.village, donor.union, donor.upazila]
+                                .filter(Boolean)
+                                .join(', ') || 'Location not set'}
                         </span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-1.5 text-[11.5px]">

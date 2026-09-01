@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -16,7 +16,7 @@ type SharedUser = {
 };
 
 export default function Settings() {
-    const auth = usePage().props.auth as { user?: SharedUser } | undefined;
+    const auth = usePage().props.auth as unknown as { user?: SharedUser } | undefined;
     const user = auth?.user;
     const [logoutOpen, setLogoutOpen] = useState(false);
 
@@ -33,7 +33,7 @@ export default function Settings() {
             <Head title="Settings" />
 
             <div className="min-h-screen bg-page">
-                <DonorPageHeader title="Settings" />
+                <DonorPageHeader title="Settings" backHref="/profile" />
 
                 <div className="space-y-4 px-4 py-4">
                     <section>
@@ -41,12 +41,12 @@ export default function Settings() {
                             Account
                         </div>
                         <div className="overflow-hidden rounded-lg border border-line bg-white">
-                            <a href={editRoute().url} className={rowClass}>
+                            <Link href={editRoute().url} className={rowClass}>
                                 <span className="text-[14px] font-medium text-ink">
                                     Edit Profile
                                 </span>
                                 <ChevronRight className="h-4 w-4 text-ink-mute" aria-hidden="true" />
-                            </a>
+                            </Link>
                             <button
                                 type="button"
                                 onClick={() => comingSoon('Password change')}
@@ -75,12 +75,12 @@ export default function Settings() {
                             Donation
                         </div>
                         <div className="overflow-hidden rounded-lg border border-line bg-white">
-                            <a href={donationsRoute().url} className={rowClass}>
+                            <Link href={donationsRoute().url} className={rowClass}>
                                 <span className="text-[14px] font-medium text-ink">
                                     Donation History
                                 </span>
                                 <ChevronRight className="h-4 w-4 text-ink-mute" aria-hidden="true" />
-                            </a>
+                            </Link>
                             <div className="flex items-center justify-between border-t border-line-soft px-4 py-3">
                                 <span className="text-[14px] font-medium text-ink">
                                     Last Donation

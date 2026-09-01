@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { Droplet } from 'lucide-react';
 import InputError from '@/components/input-error';
 import {
@@ -16,7 +16,7 @@ export default function Login() {
             <Head title="Login" />
 
             <div className="min-h-screen bg-page">
-                <DonorPageHeader title="Login" />
+                <DonorPageHeader title="Login" backHref="/" />
 
                 <div className="px-4 py-6">
                     <div className="mb-6 text-center">
@@ -83,12 +83,12 @@ export default function Login() {
                     </Form>
 
                     <div className="mt-4 flex items-center justify-between text-[12.5px]">
-                        <a
+                        <Link
                             href={registerRoute().url}
                             className="font-semibold text-blood hover:underline"
                         >
                             Create New Profile
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>

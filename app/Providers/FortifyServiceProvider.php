@@ -6,6 +6,7 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
 use App\Models\Union;
+use App\Models\Upazila;
 use App\Models\Village;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -85,7 +86,8 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::registerView(fn () => Inertia::render('auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
-            'unions' => Union::query()->orderBy('name')->get(['id', 'name']),
+            'upazilas' => Upazila::query()->orderBy('name')->get(['id', 'name']),
+            'unions' => Union::query()->orderBy('name')->get(['id', 'upazila_id', 'name']),
             'villages' => Village::query()->orderBy('name')->get(['id', 'union_id', 'name']),
         ]));
 

@@ -9,19 +9,26 @@ use Illuminate\Database\Seeder;
 class VillageSeeder extends Seeder
 {
     /**
-     * Villages grouped by union name.
+     * Starter villages grouped by union name (Noakhali).
+     * The catalog grows organically as donors add their own.
      */
     public function run(): void
     {
         $villagesByUnion = [
-            'Barura Union' => ['West Village', 'East Village', 'Barura Bazar'],
-            'Kachua Union' => ['Kachua', 'North Kachua'],
-            'Cumilla Sadar Union' => ['Cumilla Sadar', 'Daudkandi'],
-            'Mirpur Union' => ['Mirpur'],
-            'Brahmanbaria Union' => ['Brahmanbaria'],
-            'Sonaimuri Union' => ['Sonaimuri'],
-            'Sitakunda Union' => ['Sitakunda'],
-            'Patiya Union' => ['Patiya'],
+            'বিনোদপুর' => ['মাইজদী কোর্ট', 'দৌলতগঞ্জ', 'সোনাপুর'],
+            'নোয়াখালী' => ['নোয়াখালী বাজার', 'রাজগঞ্জ বাজার'],
+            'জয়াগ' => ['জয়াগ বাজার', 'উত্তর জয়াগ'],
+            'চাষীর হাট' => ['চাষীর হাট', 'পশ্চিম চাষীর হাট'],
+            'বেগমগঞ্জ' => ['বেগমগঞ্জ বাজার', 'চৌমুহনী'],
+            'ছয়ানী' => ['ছয়ানী', 'পূর্ব ছয়ানী'],
+            'কাবিলপুর' => ['কাবিলপুর বাজার', 'দক্ষিণ কাবিলপুর'],
+            'সাহাপুর' => ['সাহাপুর', 'উত্তর সাহাপুর'],
+            'পাঁচগাঁও' => ['পাঁচগাঁও বাজার', 'মধ্যম পাঁচগাঁও'],
+            'চর আমানউল্যাহ' => ['চর আমানউল্যাহ', 'পূর্ব চর আমানউল্যাহ'],
+            'চরবাটা' => ['চরবাটা বাজার', 'নয়াবাজার'],
+            'হরণী' => ['হরণী', 'পশ্চিম হরণী'],
+            'সুখচর' => ['সুখচর বাজার', 'পূর্ব সুখচর'],
+            'নরোত্তমপুর' => ['নরোত্তমপুর বাজার', 'কাজিরহাট'],
         ];
 
         foreach ($villagesByUnion as $unionName => $villages) {

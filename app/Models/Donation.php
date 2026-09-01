@@ -10,6 +10,12 @@ class Donation extends Model
 {
     use HasUuids;
 
+    /**
+     * Minimum days between two donations (the 2.5-month rule).
+     * Single source of truth for validation, eligibility display and filtering.
+     */
+    public const MIN_DONATION_GAP_DAYS = 75;
+
     protected $fillable = [
         'user_id',
         'donation_date',

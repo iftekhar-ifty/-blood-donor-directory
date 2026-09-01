@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Donation;
 use App\Models\Union;
+use App\Models\Upazila;
 use App\Models\User;
 use App\Models\Village;
 use Illuminate\Http\Request;
@@ -15,7 +17,10 @@ class DonorController extends Controller
     {
         $query = User::query()
             ->where('id', '!=', $request->user()->id)
-            ->with(['union:id,name', 'village:id,name'])
+            ->with([
+                'union' => fn ($q) => $q->select('id', 'name', 'upazila_id')->with('upazila:id,name'),
+                'village:id,name',
+            ])
             ->withCount('donations');
 
         // 1. Search (name, username, blood group, union name, village name)
@@ -60,7 +65,7 @@ class DonorController extends Controller
         if ($request->filled('donation_status') && $request->donation_status !== 'all') {
             match ($request->donation_status) {
                 'never' => $query->whereNull('last_donation_date'),
-                'recent' => $query->where('last_donation_date', '>=', now()->subDays(90)),
+                'recent' => $query->where('last_donation_date', '>=', now()->subDays(Donation::MIN_DONATION_GAP_DAYS)),
                 'before' => $query->whereNotNull('last_donation_date'),
                 default => null,
             };
@@ -82,7 +87,8 @@ class DonorController extends Controller
                 'total' => User::count(),
                 'available' => User::where('is_available', true)->count(),
             ],
-            'unions' => Union::query()->orderBy('name')->get(['id', 'name']),
+            'upazilas' => Upazila::query()->orderBy('name')->get(['id', 'name']),
+            'unions' => Union::query()->orderBy('name')->get(['id', 'upazila_id', 'name']),
             'villages' => Village::query()->orderBy('name')->get(['id', 'union_id', 'name']),
         ]);
     }
@@ -97,7 +103,10 @@ class DonorController extends Controller
 
         $donor = $user;
 
-        $donor->load(['union:id,name', 'village:id,name'])->loadCount('donations');
+        $donor->load([
+            'union' => fn ($q) => $q->select('id', 'name', 'upazila_id')->with('upazila:id,name'),
+            'village:id,name',
+        ])->loadCount('donations');
 
         return Inertia::render('donors/show', [
             'donor' => [
@@ -118,6 +127,7 @@ class DonorController extends Controller
             'blood_group' => $donor->blood_group,
             'village' => $donor->village?->name,
             'union' => $donor->union?->name,
+            'upazila' => $donor->union?->upazila?->name,
             'available' => $donor->is_available,
             'last_donation_date' => $donor->last_donation_date?->format('Y-m-d'),
             'donations_count' => $donor->donations_count,

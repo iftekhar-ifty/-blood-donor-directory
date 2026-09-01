@@ -31,7 +31,13 @@ class CreateNewUser implements CreatesNewUsers
                 Rule::exists('villages', 'id')->where('union_id', $input['union_id'] ?? null),
             ],
             'is_available' => ['boolean'],
+            'referral_code' => ['nullable', 'string', 'exists:users,referral_code'],
         ])->validate();
+
+        // Resolve the optional code to the referring user
+        $referrer = isset($validated['referral_code'])
+            ? User::where('referral_code', $validated['referral_code'])->first()
+            : null;
 
         return User::create([
             'name' => $validated['name'],
@@ -42,6 +48,8 @@ class CreateNewUser implements CreatesNewUsers
             'union_id' => $validated['union_id'] ?? null,
             'village_id' => $validated['village_id'] ?? null,
             'is_available' => $validated['is_available'] ?? true,
+            'referral_code' => User::generateReferralCode(),
+            'referred_by_user_id' => $referrer?->id,
         ]);
     }
 }

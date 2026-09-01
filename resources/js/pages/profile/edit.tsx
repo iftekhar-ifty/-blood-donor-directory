@@ -13,16 +13,18 @@ import {
 } from '@/components/donor/form-styles';
 import InputError from '@/components/input-error';
 import LocationSelects from '@/components/donor/location-selects';
-import type { OwnProfile, UnionOption, VillageOption } from '@/components/donor/types';
+import type { OwnProfile, UnionOption, UpazilaOption, VillageOption } from '@/components/donor/types';
 import { update as updateRoute } from '@/routes/donor/profile';
 import { cn } from '@/lib/utils';
 
 export default function ProfileEdit({
     user,
+    upazilas,
     unions,
     villages,
 }: {
     user: OwnProfile;
+    upazilas: UpazilaOption[];
     unions: UnionOption[];
     villages: VillageOption[];
 }) {
@@ -31,6 +33,7 @@ export default function ProfileEdit({
     const [available, setAvailable] = useState(user.available);
     const [unionId, setUnionId] = useState(user.union_id ? String(user.union_id) : '');
     const [villageId, setVillageId] = useState(user.village_id ? String(user.village_id) : '');
+    const [knownVillages, setKnownVillages] = useState(villages);
 
     // Server-side validation errors surface after a failed submit
     useEffect(() => {
@@ -44,7 +47,7 @@ export default function ProfileEdit({
             <Head title="Edit Profile" />
 
             <div className="min-h-screen bg-page">
-                <DonorPageHeader title="Edit Profile" />
+                <DonorPageHeader title="Edit Profile" backHref="/profile" />
 
                 <Form
                     {...updateRoute.form()}
@@ -111,12 +114,16 @@ export default function ProfileEdit({
                             <div className={sectionLabelClass}>Location</div>
                             <div className={cn(sectionCardClass, 'mb-4')}>
                                 <LocationSelects
+                                    upazilas={upazilas}
                                     unions={unions}
-                                    villages={villages}
+                                    villages={knownVillages}
                                     unionId={unionId}
                                     villageId={villageId}
                                     onUnionChange={setUnionId}
                                     onVillageChange={setVillageId}
+                                    onVillageCreated={(village) =>
+                                        setKnownVillages((current) => [...current, village])
+                                    }
                                 />
                                 <InputError message={errors?.village_id} />
                             </div>

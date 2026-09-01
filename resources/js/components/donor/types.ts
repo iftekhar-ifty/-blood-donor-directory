@@ -11,6 +11,7 @@ export type PublicDonor = {
     blood_group: BloodGroup;
     village: string | null;
     union: string | null;
+    upazila: string | null;
     available: boolean;
     last_donation_date: string | null;
     donations_count: number;
@@ -27,10 +28,13 @@ export type OwnProfile = {
     village_id: number | null;
     union: string | null;
     union_id: number | null;
+    upazila: string | null;
     available: boolean;
     unavailable_reason: string | null;
     last_donation_date: string | null;
     donations_count: number;
+    referral_code: string | null;
+    referrals_count?: number;
 };
 
 export type Donation = {
@@ -43,7 +47,9 @@ export type Donation = {
     status: string;
 };
 
-export type UnionOption = { id: number; name: string };
+export type UpazilaOption = { id: number; name: string };
+
+export type UnionOption = { id: number; upazila_id: number | null; name: string };
 
 export type VillageOption = { id: number; union_id: number; name: string };
 

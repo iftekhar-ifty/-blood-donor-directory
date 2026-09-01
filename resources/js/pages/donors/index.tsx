@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Droplet, Search, SlidersHorizontal, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import BottomSheet from '@/components/donor/bottom-sheet';
 import DonorAvatar from '@/components/donor/donor-avatar';
 import DonorCard from '@/components/donor/donor-card';
@@ -9,6 +9,7 @@ import {
     BLOOD_GROUPS,
     type PublicDonor,
     type UnionOption,
+    type UpazilaOption,
     type VillageOption,
 } from '@/components/donor/types';
 import { index as donorsIndexRoute } from '@/routes/donors';
@@ -31,6 +32,7 @@ type Props = {
     };
     filters: Partial<Filters>;
     stats: { total: number; available: number };
+    upazilas: UpazilaOption[];
     unions: UnionOption[];
     villages: VillageOption[];
 };
@@ -46,7 +48,7 @@ const DEFAULT_FILTERS: Filters = {
 
 const DONATION_STATUS_LABELS: Record<string, string> = {
     never: 'Never Donated',
-    recent: 'Recently Donated (90 days)',
+    recent: 'Recently Donated (75 days)',
     before: 'Donated Before',
 };
 
@@ -71,7 +73,7 @@ function applyFilters(filters: Filters) {
     });
 }
 
-export default function DonorsIndex({ donors, filters, stats, unions, villages }: Props) {
+export default function DonorsIndex({ donors, filters, stats, upazilas, unions, villages }: Props) {
     const auth = usePage().props.auth as { user?: { name: string } } | undefined;
     const [search, setSearch] = useState(filters.search ?? '');
     const [searchTimer, setSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -79,8 +81,28 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
         ...DEFAULT_FILTERS,
         ...filters,
     });
+    const [sheetUpazilaId, setSheetUpazilaId] = useState('all');
     const [filterOpen, setFilterOpen] = useState(false);
+    const [groupOpen, setGroupOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const groupRef = useRef<HTMLDivElement | null>(null);
+
+    // Close the blood-group popover when clicking outside it
+    useEffect(() => {
+        if (!groupOpen) {
+            return;
+        }
+
+        const onClickOutside = (event: MouseEvent) => {
+            if (groupRef.current && !groupRef.current.contains(event.target as Node)) {
+                setGroupOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', onClickOutside);
+
+        return () => document.removeEventListener('mousedown', onClickOutside);
+    }, [groupOpen]);
 
     // Skeleton rows while a search/filter/pagination visit is in flight
     useEffect(() => {
@@ -95,6 +117,70 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
 
     const current: Filters = { ...DEFAULT_FILTERS, ...filters };
     const tab = filters.search || current.blood_group !== 'all' ? 'search' : 'home';
+
+    // Infinite scroll: accumulate donor pages in state, resetting when the
+    // query (filters/search) changes and appending when a later page arrives.
+    const queryKey = JSON.stringify(toQuery(current));
+    const [items, setItems] = useState<PublicDonor[]>(donors.data);
+    const [page, setPage] = useState(donors.current_page);
+    const lastKeyRef = useRef(queryKey);
+
+    useEffect(() => {
+        if (queryKey !== lastKeyRef.current) {
+            // New query (filter/search change) — start over from page 1
+            lastKeyRef.current = queryKey;
+            setItems(donors.data);
+            setPage(donors.current_page);
+
+            return;
+        }
+
+        if (donors.current_page !== page) {
+            // Same query, next page fetched by the scroll sentinel — merge it in
+            setPage(donors.current_page);
+            setItems((prev) => {
+                const seen = new Set(prev.map((donor) => donor.id));
+
+                return [...prev, ...donors.data.filter((donor) => !seen.has(donor.id))];
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [donors, queryKey]);
+
+    // Scroll sentinel: request the next page when the marker enters the viewport
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const node = sentinelRef.current;
+
+        if (!node || page >= donors.last_page || loading) {
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries.some((entry) => entry.isIntersecting)) {
+                    return;
+                }
+
+                router.get(
+                    donorsIndexRoute({ query: toQuery(current, page + 1) }).url,
+                    {},
+                    {
+                        only: ['donors'],
+                        preserveState: true,
+                        preserveScroll: true,
+                    },
+                );
+            },
+            { rootMargin: '300px' },
+        );
+
+        observer.observe(node);
+
+        return () => observer.disconnect();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, donors.last_page, loading, queryKey]);
 
     const activeFilterCount = [
         current.blood_group !== 'all',
@@ -127,10 +213,6 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
-
-    const setChip = (bloodGroup: string) => {
-        applyFilters({ ...current, blood_group: bloodGroup });
-    };
 
     const clearAll = () => {
         setSearch('');
@@ -183,6 +265,15 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                             type="button"
                             onClick={() => {
                                 setSheetFilters(current);
+                                setSheetUpazilaId(
+                                    current.union_id !== 'all'
+                                        ? String(
+                                              unions.find(
+                                                  (union) => String(union.id) === current.union_id,
+                                              )?.upazila_id ?? 'all',
+                                          )
+                                        : 'all',
+                                );
                                 setFilterOpen(true);
                             }}
                             aria-label="Open filters"
@@ -196,37 +287,67 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                                 </span>
                             )}
                         </button>
-                    </div>
 
-                    {/* Blood group chips */}
-                    <div className="no-scroll flex gap-1.5 overflow-x-auto bg-page px-4 pb-2.5">
-                        <button
-                            type="button"
-                            onClick={() => setChip('all')}
-                            className={cn(
-                                'whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-semibold',
-                                current.blood_group === 'all'
-                                    ? 'bg-blood text-white'
-                                    : 'border border-line bg-white text-ink',
-                            )}
-                        >
-                            All
-                        </button>
-                        {BLOOD_GROUPS.map((group) => (
+                        {/* Compact blood-group picker beside the Filter button */}
+                        <div className="relative" ref={groupRef}>
                             <button
-                                key={group}
                                 type="button"
-                                onClick={() => setChip(group)}
+                                onClick={() => setGroupOpen((open) => !open)}
+                                aria-label="Filter by blood group"
+                                aria-expanded={groupOpen}
                                 className={cn(
-                                    'whitespace-nowrap rounded-full px-3 py-1.5 font-mono text-[12px] font-bold',
-                                    current.blood_group === group
-                                        ? 'bg-blood text-white'
-                                        : 'border border-line bg-white text-ink',
+                                    'flex items-center gap-1 rounded-lg border px-3 text-[13px] font-medium',
+                                    current.blood_group !== 'all'
+                                        ? 'border-blood bg-blood text-white'
+                                        : 'border-line bg-white text-ink hover:bg-line-soft',
                                 )}
                             >
-                                {group}
+                                <Droplet className="h-4 w-4 fill-current" aria-hidden="true" />
+                                <span className="font-mono font-bold">
+                                    {current.blood_group === 'all' ? 'All' : current.blood_group}
+                                </span>
                             </button>
-                        ))}
+
+                            {groupOpen && (
+                                <div className="absolute right-0 z-30 mt-1.5 w-44 rounded-xl border border-line bg-white p-2 shadow-lg">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setGroupOpen(false);
+                                                applyFilters({ ...current, blood_group: 'all' });
+                                            }}
+                                            className={cn(
+                                                'rounded-md border py-2 text-[12.5px] font-semibold',
+                                                current.blood_group === 'all'
+                                                    ? 'border-blood bg-blood text-white'
+                                                    : 'border-line bg-white text-ink',
+                                            )}
+                                        >
+                                            All
+                                        </button>
+                                        {BLOOD_GROUPS.map((group) => (
+                                            <button
+                                                key={group}
+                                                type="button"
+                                                onClick={() => {
+                                                    setGroupOpen(false);
+                                                    applyFilters({ ...current, blood_group: group });
+                                                }}
+                                                className={cn(
+                                                    'rounded-md border py-2 font-mono text-[12.5px] font-bold',
+                                                    current.blood_group === group
+                                                        ? 'border-blood bg-blood text-white'
+                                                        : 'border-line bg-white text-ink',
+                                                )}
+                                            >
+                                                {group}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -291,6 +412,7 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                     {/* Donor list */}
                     <div className="space-y-2.5">
                         {loading &&
+                            items.length === 0 &&
                             Array.from({ length: 4 }).map((_, index) => (
                                 // eslint-disable-next-line react/no-array-index-key
                                 <div
@@ -306,7 +428,7 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                                 </div>
                             ))}
 
-                        {!loading && donors.data.length === 0 && (
+                        {!loading && items.length === 0 && (
                             <div className="py-12 text-center">
                                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blood-tint">
                                     <Search className="h-8 w-8 text-blood" aria-hidden="true" />
@@ -328,40 +450,28 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                             </div>
                         )}
 
-                        {!loading &&
-                            donors.data.map((donor) => (
-                                <DonorCard key={donor.id} donor={donor} />
+                        {items.map((donor) => (
+                            <DonorCard key={donor.id} donor={donor} />
+                        ))}
+
+                        {/* Loading spinner while appending the next page */}
+                        {loading && items.length > 0 && (
+                            <div className="flex items-center justify-center gap-2 py-4 text-[12.5px] text-ink-soft">
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-blood" />
+                                Loading more donors…
+                            </div>
+                        )}
+
+                        {/* Scroll sentinel + end-of-list marker */}
+                        {items.length > 0 &&
+                            (page < donors.last_page ? (
+                                <div ref={sentinelRef} className="h-1" aria-hidden="true" />
+                            ) : (
+                                <p className="py-4 text-center text-[12px] text-ink-mute">
+                                    — End of results ({stats.total} donors) —
+                                </p>
                             ))}
                     </div>
-
-                    {/* Pagination */}
-                    {donors.last_page > 1 && (
-                        <div className="mt-4 flex items-center justify-center gap-3 text-[13px]">
-                            {donors.current_page > 1 && (
-                                <Link
-                                    href={donorsIndexRoute({
-                                        query: toQuery(current, donors.current_page - 1),
-                                    }).url}
-                                    className="rounded-md border border-line bg-white px-3 py-1.5 font-medium text-ink hover:bg-line-soft"
-                                >
-                                    ← Prev
-                                </Link>
-                            )}
-                            <span className="text-ink-soft">
-                                Page {donors.current_page} of {donors.last_page}
-                            </span>
-                            {donors.current_page < donors.last_page && (
-                                <Link
-                                    href={donorsIndexRoute({
-                                        query: toQuery(current, donors.current_page + 1),
-                                    }).url}
-                                    className="rounded-md border border-line bg-white px-3 py-1.5 font-medium text-ink hover:bg-line-soft"
-                                >
-                                    Next →
-                                </Link>
-                            )}
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -374,7 +484,10 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                     <>
                         <button
                             type="button"
-                            onClick={() => setSheetFilters(DEFAULT_FILTERS)}
+                            onClick={() => {
+                                setSheetUpazilaId('all');
+                                setSheetFilters(DEFAULT_FILTERS);
+                            }}
                             className="flex-1 rounded-md border border-line py-3 text-[14px] font-medium text-ink hover:bg-line-soft"
                         >
                             Clear All
@@ -467,6 +580,26 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                         </h3>
                         <div className="space-y-3">
                             <select
+                                aria-label="Upazila filter"
+                                value={sheetUpazilaId}
+                                onChange={(event) => {
+                                    setSheetUpazilaId(event.target.value);
+                                    setSheetFilters((f) => ({
+                                        ...f,
+                                        union_id: 'all',
+                                        village_id: 'all',
+                                    }));
+                                }}
+                                className={selectClass}
+                            >
+                                <option value="all">All Upazilas</option>
+                                {upazilas.map((upazila) => (
+                                    <option key={upazila.id} value={upazila.id}>
+                                        {upazila.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
                                 aria-label="Union filter"
                                 value={sheetFilters.union_id}
                                 onChange={(event) =>
@@ -478,12 +611,20 @@ export default function DonorsIndex({ donors, filters, stats, unions, villages }
                                 }
                                 className={selectClass}
                             >
-                                <option value="all">All Unions</option>
-                                {unions.map((union) => (
-                                    <option key={union.id} value={union.id}>
-                                        {union.name}
-                                    </option>
-                                ))}
+                                <option value="all">
+                                    {sheetUpazilaId === 'all' ? 'All Unions' : 'All unions in upazila'}
+                                </option>
+                                {unions
+                                    .filter(
+                                        (union) =>
+                                            sheetUpazilaId === 'all' ||
+                                            String(union.upazila_id) === sheetUpazilaId,
+                                    )
+                                    .map((union) => (
+                                        <option key={union.id} value={union.id}>
+                                            {union.name}
+                                        </option>
+                                    ))}
                             </select>
                             <select
                                 aria-label="Village filter"

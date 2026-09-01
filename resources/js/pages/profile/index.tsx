@@ -1,5 +1,5 @@
-import { Head, router, usePage } from '@inertiajs/react';
-import { ChevronRight, Clock, Droplet, Plus, Settings } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Check, ChevronRight, Clock, Copy, Droplet, Plus, Settings, Share2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import BottomSheet from '@/components/donor/bottom-sheet';
@@ -25,6 +25,44 @@ export default function ProfileIndex({
     const flash = (usePage().props as { flash?: { success?: string } }).flash;
     const [logoutOpen, setLogoutOpen] = useState(false);
     const [reason, setReason] = useState(user.unavailable_reason ?? '');
+    const [codeCopied, setCodeCopied] = useState(false);
+
+    const referralLink = user.referral_code
+        ? `${window.location.origin}/register?ref=${user.referral_code}`
+        : '';
+
+    const copyReferralCode = async () => {
+        if (!user.referral_code) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(referralLink);
+            setCodeCopied(true);
+            toast.success('Referral code copied!');
+            setTimeout(() => setCodeCopied(false), 2000);
+        } catch {
+            toast.error('Could not copy — long-press to select the code.');
+        }
+    };
+
+    const shareReferralCode = async () => {
+        const shareData = {
+            title: 'Rokto Bondhu',
+            text: `Join me as a blood donor! Use my referral code ${user.referral_code}:`,
+            url: referralLink,
+        };
+
+        if (typeof navigator.share === 'function') {
+            try {
+                await navigator.share(shareData);
+            } catch {
+                // User dismissed the share sheet — nothing to do
+            }
+        } else {
+            copyReferralCode();
+        }
+    };
 
     useEffect(() => {
         if (flash?.success) {
@@ -50,12 +88,12 @@ export default function ProfileIndex({
             <div className="min-h-screen bg-page">
                 <div className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-4 py-3">
                     <h1 className="text-[16px] font-semibold">My Profile</h1>
-                    <a
+                    <Link
                         href={editRoute().url}
                         className="flex items-center gap-1 text-[13px] font-semibold text-blood"
                     >
                         Edit
-                    </a>
+                    </Link>
                 </div>
 
                 <div className="px-4 py-5">
@@ -178,7 +216,7 @@ export default function ProfileIndex({
 
                     {/* Quick links */}
                     <div className="mb-3 overflow-hidden rounded-lg border border-line bg-white">
-                        <a
+                        <Link
                             href={donationsRoute().url}
                             className="flex w-full items-center justify-between border-b border-line-soft px-4 py-3.5 text-left transition hover:bg-line-soft"
                         >
@@ -194,8 +232,8 @@ export default function ProfileIndex({
                                 </span>
                                 <ChevronRight className="h-4 w-4 text-ink-mute" aria-hidden="true" />
                             </div>
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href={`${donationsRoute().url}?add=1`}
                             className="flex w-full items-center justify-between border-b border-line-soft px-4 py-3.5 text-left transition hover:bg-line-soft"
                         >
@@ -206,8 +244,8 @@ export default function ProfileIndex({
                                 </span>
                             </div>
                             <ChevronRight className="h-4 w-4 text-ink-mute" aria-hidden="true" />
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/settings"
                             className="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-line-soft"
                         >
@@ -218,8 +256,52 @@ export default function ProfileIndex({
                                 </span>
                             </div>
                             <ChevronRight className="h-4 w-4 text-ink-mute" aria-hidden="true" />
-                        </a>
+                        </Link>
                     </div>
+
+                    {/* Referral */}
+                    {user.referral_code && (
+                        <div className="mb-3 rounded-lg border border-line bg-white p-4">
+                            <div className="mb-2.5 flex items-center gap-2">
+                                <UserPlus className="h-4 w-4 text-blood" aria-hidden="true" />
+                                <span className="text-[14px] font-semibold text-ink">
+                                    Invite Friends
+                                </span>
+                                <span className="ml-auto text-[12px] text-ink-soft">
+                                    {user.referrals_count ?? 0} joined
+                                </span>
+                            </div>
+                            <p className="mb-3 text-[12px] leading-relaxed text-ink-soft">
+                                Share your code — when friends register with it,
+                                they'll be counted as your referrals.
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <code className="flex-1 rounded-md border border-dashed border-blood/40 bg-blood-tint px-3 py-2.5 text-center font-mono text-[15px] font-bold tracking-widest text-blood">
+                                    {user.referral_code}
+                                </code>
+                                <button
+                                    type="button"
+                                    onClick={copyReferralCode}
+                                    aria-label="Copy referral code"
+                                    className="flex h-10 w-10 items-center justify-center rounded-md border border-line text-ink transition hover:bg-line-soft"
+                                >
+                                    {codeCopied ? (
+                                        <Check className="h-4 w-4 text-good" strokeWidth={2.5} aria-hidden="true" />
+                                    ) : (
+                                        <Copy className="h-4 w-4" aria-hidden="true" />
+                                    )}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={shareReferralCode}
+                                    aria-label="Share referral code"
+                                    className="flex h-10 w-10 items-center justify-center rounded-md bg-blood text-white transition hover:bg-blood-deep"
+                                >
+                                    <Share2 className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Contact & location */}
                     <div className="mb-3 rounded-lg border border-line bg-white p-4">
@@ -243,6 +325,12 @@ export default function ProfileIndex({
                                 <span className="shrink-0 text-ink-soft">Union</span>
                                 <span className="text-right font-medium text-ink">
                                     {user.union ?? '—'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                                <span className="shrink-0 text-ink-soft">Upazila</span>
+                                <span className="text-right font-medium text-ink">
+                                    {user.upazila ?? '—'}
                                 </span>
                             </div>
                             <div className="flex justify-between gap-3">

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -55,6 +56,8 @@ class User extends Authenticatable implements PasskeyUser
         'is_available',
         'unavailable_reason',
         'last_donation_date',
+        'referral_code',
+        'referred_by_user_id',
     ];
 
     protected $hidden = [
@@ -88,5 +91,27 @@ class User extends Authenticatable implements PasskeyUser
     public function donations(): HasMany
     {
         return $this->hasMany(Donation::class)->orderBy('donation_date', 'desc');
+    }
+
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by_user_id');
+    }
+
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referred_by_user_id');
+    }
+
+    /**
+     * An unused 8-char uppercase alphanumeric referral code.
+     */
+    public static function generateReferralCode(): string
+    {
+        do {
+            $code = strtoupper(Str::random(8));
+        } while (static::query()->where('referral_code', $code)->exists());
+
+        return $code;
     }
 }

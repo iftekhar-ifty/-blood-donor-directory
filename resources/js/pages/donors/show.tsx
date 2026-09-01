@@ -85,6 +85,12 @@ export default function DonorsShow({ donor }: { donor: PublicDonor }) {
                                     {donor.union ?? '—'}
                                 </span>
                             </div>
+                            <div className="flex justify-between">
+                                <span className="text-ink-soft">Upazila</span>
+                                <span className="font-medium text-ink">
+                                    {donor.upazila ?? '—'}
+                                </span>
+                            </div>
                         </div>
                     </div>
 

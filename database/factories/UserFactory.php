@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<User>
@@ -31,7 +30,7 @@ class UserFactory extends Factory
             'password_hash' => static::$password ??= Hash::make('password'),
             'blood_group' => fake()->randomElement(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
             'is_available' => fake()->boolean(80),
-            'remember_token' => Str::random(10),
+            'referral_code' => User::generateReferralCode(),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,

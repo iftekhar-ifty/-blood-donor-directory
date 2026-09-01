@@ -3,28 +3,66 @@
 namespace Database\Seeders;
 
 use App\Models\Union;
+use App\Models\Upazila;
 use Illuminate\Database\Seeder;
 
 class UnionSeeder extends Seeder
 {
     /**
-     * Unions of the single district this app operates in.
+     * The unions of Noakhali district (Bengali names), mapped to their
+     * parent upazila — compiled from the official district portal
+     * (noakhali.gov.bd union list).
      */
     public function run(): void
     {
-        $unions = [
-            'Barura Union',
-            'Kachua Union',
-            'Cumilla Sadar Union',
-            'Mirpur Union',
-            'Brahmanbaria Union',
-            'Sonaimuri Union',
-            'Sitakunda Union',
-            'Patiya Union',
+        $unionsByUpazila = [
+            'নোয়াখালী সদর' => [
+                'চরমটুয়া', 'দাদপুর', 'নোয়ান্নই', 'বিনোদপুর', 'নোয়াখালী', 'ধর্মপুর',
+                'এওজবালিয়া', 'কালাদরাপ', 'অশ্বদিয়া', 'নেওয়াজপুর', 'পূর্বচরমটুয়া', 'আন্ডার চর',
+            ],
+            'বেগমগঞ্জ' => [
+                'আমানউল্যাপুর', 'গোপালপুর', 'কাদির হানিফ', 'জীরতলী', 'নোয়াখালী', 'আলাইয়ারপুর',
+                'ছয়ানী', 'রাজগঞ্জ', 'একলাশপুর', 'বেগমগঞ্জ', 'মিরওয়ারিশপুর', 'নরোত্তমপুর',
+                'দুর্গাপুর', 'কুতুবপুর', 'রসুলপুর', 'হাজীপুর', 'শরীফপুর', 'কাদিরপুর',
+            ],
+            'কোম্পানীগঞ্জ' => [
+                'সিরাজপুর', 'চরপার্বতী', 'চরহাজারী', 'চরকাঁকড়া', 'চরফকিরা',
+                'রামপুর', 'মুছাপুর', 'চর এলাহী',
+            ],
+            'সেনবাগ' => [
+                'ছাতারপাইয়া', 'কেশারপাড়', 'ডমুরুয়া', 'কাদরা', 'অর্জুনতলা',
+                'কাবিলপুর', 'মোহাম্মদপুর', 'বীজবাগ', 'নবীপুর',
+            ],
+            'চাটখিল' => [
+                'সাহাপুর', 'রামনারায়নপুর', 'পরকোট', 'বদলকোট', 'মোহাম্মদপুর',
+                'পাঁচগাঁও', 'হাটপকুরিয়া ঘাটলাবাগ', 'নোয়াখালা', 'খিলপাড়া',
+            ],
+            'হাতিয়া' => [
+                'হরণী', 'চানন্দী', 'সুখচর', 'নলচিরা', 'চরঈশ্বর', 'চরকিং',
+                'তমরদ্দি', 'সোনাদিয়া', 'বুড়িরচর', 'জাহাজমারা', 'নিঝুম দ্বীপ',
+            ],
+            'সোনাইমুড়ি' => [
+                'জয়াগ', 'নদনা', 'চাষীর হাট', 'বারগাঁও', 'অম্বরনগর',
+                'নাটেশ্বর', 'বজরা', 'সোনাপুর', 'দেওটি', 'আমিশাপাড়া',
+            ],
+            'সুবর্ণচর' => [
+                'চরজব্বর', 'চরবাটা', 'চরক্লার্ক', 'চরওয়াপদা', 'চরজুবলী',
+                'চর আমানউল্যাহ', 'পূর্বচরবাটা', 'মোহাম্মদপুর',
+            ],
+            'কবিরহাট' => [
+                'নরোত্তমপুর', 'সুন্দলপুর', 'ধানসিঁড়ি', 'ঘোষবাগ',
+                'চাপরাশিরহাট', 'ধানশালিক', 'বাটইয়া',
+            ],
         ];
 
-        foreach ($unions as $name) {
-            Union::firstOrCreate(['name' => $name]);
+        foreach ($unionsByUpazila as $upazilaName => $unions) {
+            $upazila = Upazila::firstOrCreate(['name' => $upazilaName]);
+
+            foreach ($unions as $name) {
+                Union::firstOrCreate(
+                    ['name' => $name, 'upazila_id' => $upazila->id],
+                );
+            }
         }
     }
 }
