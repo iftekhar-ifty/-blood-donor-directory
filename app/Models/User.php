@@ -7,6 +7,8 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -27,7 +29,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password'])]
+
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -39,12 +41,39 @@ class User extends Authenticatable implements PasskeyUser
      *
      * @return array<string, string>
      */
-    protected function casts(): array
+    protected $keyType = 'uuid';
+    public $incrementing = false;
+
+    protected $fillable = [
+        'name',
+        'username',
+        'phone',
+        'password_hash',
+        'blood_group',
+        'district_id',
+        'union_name',
+        'village_name',
+        'is_available',
+        'unavailable_reason',
+        'last_donation_date',
+    ];
+
+    protected $hidden = [
+        'password_hash',
+    ];
+
+    protected $casts = [
+        'is_available' => 'boolean',
+        'last_donation_date' => 'date',
+    ];
+
+    public function district(): BelongsTo
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'two_factor_confirmed_at' => 'datetime',
-        ];
+        return $this->belongsTo(District::class);
+    }
+
+    public function donations(): HasMany
+    {
+        return $this->hasMany(Donation::class)->orderBy('donation_date', 'desc');
     }
 }
