@@ -1,117 +1,97 @@
 import { Form, Head } from '@inertiajs/react';
+import { Droplet } from 'lucide-react';
 import InputError from '@/components/input-error';
-import PasswordInput from '@/components/password-input';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { register } from '@/routes';
-import { store } from '@/routes/login';
-import { request } from '@/routes/password';
-import PasskeyVerify from '@/components/passkey-verify';
+import {
+    inputClass,
+    labelClass,
+    primaryButtonClass,
+} from '@/components/donor/form-styles';
+import DonorPageHeader from '@/components/donor/donor-page-header';
+import { register as registerRoute } from '@/routes';
+import { store as loginStore } from '@/routes/login';
 
-type Props = {
-    status?: string;
-    canResetPassword: boolean;
-};
-
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login() {
     return (
         <>
-            <Head title="Log in" />
+            <Head title="Login" />
 
-            <PasskeyVerify />
+            <div className="min-h-screen bg-page">
+                <DonorPageHeader title="Login" />
 
-            <Form
-                {...store.form()}
-                resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
-            >
-                {({ processing, errors }) => (
-                    <>
-                        <div className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    required
-                                    autoFocus
-                                    tabIndex={1}
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
-                                />
-                                <InputError message={errors.email} />
-                            </div>
+                <div className="px-4 py-6">
+                    <div className="mb-6 text-center">
+                        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-blood-tint">
+                            <Droplet className="h-8 w-8 fill-blood text-blood" aria-hidden="true" />
+                        </div>
+                        <h2 className="text-[20px] font-bold tracking-tight">
+                            Welcome back
+                        </h2>
+                        <p className="mt-1 text-[13px] text-ink-soft">
+                            Login to manage your donor profile
+                        </p>
+                    </div>
 
-                            <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
-                                    {canResetPassword && (
-                                        <TextLink
-                                            href={request()}
-                                            className="ml-auto text-sm"
-                                            tabIndex={5}
-                                        >
-                                            Forgot your password?
-                                        </TextLink>
-                                    )}
+                    <Form
+                        {...loginStore.form()}
+                        resetOnSuccess={['password']}
+                        className="space-y-3"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <div>
+                                    <label htmlFor="identifier" className={labelClass}>
+                                        Phone Number / Username
+                                    </label>
+                                    <input
+                                        id="identifier"
+                                        type="text"
+                                        name="identifier"
+                                        required
+                                        autoFocus
+                                        autoComplete="username"
+                                        placeholder="01XXXXXXXXX or username"
+                                        className={`${inputClass} font-mono`}
+                                    />
+                                    <InputError message={errors.identifier} />
                                 </div>
-                                <PasswordInput
-                                    id="password"
-                                    name="password"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="current-password"
-                                    placeholder="Password"
-                                />
-                                <InputError message={errors.password} />
-                            </div>
 
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    tabIndex={3}
-                                />
-                                <Label htmlFor="remember">Remember me</Label>
-                            </div>
+                                <div>
+                                    <label htmlFor="password" className={labelClass}>
+                                        Password
+                                    </label>
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        name="password"
+                                        required
+                                        autoComplete="current-password"
+                                        placeholder="Enter your password"
+                                        className={inputClass}
+                                    />
+                                    <InputError message={errors.password} />
+                                </div>
 
-                            <Button
-                                type="submit"
-                                className="mt-4 w-full"
-                                tabIndex={4}
-                                disabled={processing}
-                                data-test="login-button"
-                            >
-                                {processing && <Spinner />}
-                                Log in
-                            </Button>
-                        </div>
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className={primaryButtonClass}
+                                >
+                                    Login
+                                </button>
+                            </>
+                        )}
+                    </Form>
 
-                        <div className="text-muted-foreground text-center text-sm">
-                            Don't have an account?{' '}
-                            <TextLink href={register()} tabIndex={5}>
-                                Sign up
-                            </TextLink>
-                        </div>
-                    </>
-                )}
-            </Form>
-
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
+                    <div className="mt-4 flex items-center justify-between text-[12.5px]">
+                        <a
+                            href={registerRoute().url}
+                            className="font-semibold text-blood hover:underline"
+                        >
+                            Create New Profile
+                        </a>
+                    </div>
                 </div>
-            )}
+            </div>
         </>
     );
 }
-
-Login.layout = {
-    title: 'Log in to your account',
-    description: 'Enter your email and password below to log in',
-};

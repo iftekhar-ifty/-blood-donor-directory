@@ -9,9 +9,10 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Hanken Grotesk', 'Instrument Sans', ui-sans-serif, system-ui,
+        sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -139,5 +140,132 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+/* ============================================
+   Rokto Bondhu — donor app theme & shell
+   ============================================ */
+
+@theme {
+    --color-blood: #b0142a;
+    --color-blood-deep: #7c0f1f;
+    --color-blood-tint: #fbeef1;
+    --color-ink: #16161a;
+    --color-ink-soft: #54545c;
+    --color-ink-mute: #8c8c94;
+    --color-line: #e8e6e8;
+    --color-line-soft: #f0eef0;
+    --color-page: #f6f5f7;
+    --color-good: #1b7a4a;
+    --color-good-tint: #e8f3ec;
+
+    --animate-pulse-ring: pulse-ring 2.6s ease-out infinite;
+    --animate-view-enter: view-in 0.28s ease-out;
+    --animate-sheet-enter: sheet-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+    --animate-dialog-enter: dialog-in 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+    --animate-toast-enter: toast-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    --animate-backdrop-enter: backdrop-in 0.22s ease-out;
+
+    @keyframes pulse-ring {
+        0% {
+            transform: scale(1);
+            opacity: 0.35;
+        }
+        100% {
+            transform: scale(1.5);
+            opacity: 0;
+        }
+    }
+    @keyframes view-in {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    @keyframes sheet-in {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+    @keyframes dialog-in {
+        from {
+            opacity: 0;
+            transform: scale(0.96);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    @keyframes toast-in {
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    @keyframes backdrop-in {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+}
+
+/* Mobile-first app shell: 430px column, framed on desktop */
+.donor-shell {
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    background: var(--color-page);
+}
+
+@media (min-width: 768px) {
+    body:has(.donor-shell) {
+        padding: 28px 0;
+        background: #b5b1b7;
+    }
+
+    .donor-shell {
+        min-height: calc(100vh - 56px);
+        border-radius: 36px;
+        overflow: hidden;
+        border: 1px solid #a4a0a6;
+        box-shadow: 0 0 80px rgb(0 0 0 / 0.12);
+    }
+}
+
+/* Available-donor accent bar on donor cards */
+.donor-card-available::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 14px;
+    bottom: 14px;
+    width: 3px;
+    background: var(--color-good);
+    border-radius: 0 2px 2px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .donor-shell *,
+    .donor-shell *::before,
+    .donor-shell *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
     }
 }

@@ -4,8 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,7 +34,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasUuids, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -50,9 +50,8 @@ class User extends Authenticatable implements PasskeyUser
         'phone',
         'password_hash',
         'blood_group',
-        'district_id',
-        'union_name',
-        'village_name',
+        'union_id',
+        'village_id',
         'is_available',
         'unavailable_reason',
         'last_donation_date',
@@ -67,9 +66,23 @@ class User extends Authenticatable implements PasskeyUser
         'last_donation_date' => 'date',
     ];
 
-    public function district(): BelongsTo
+    public function union(): BelongsTo
     {
-        return $this->belongsTo(District::class);
+        return $this->belongsTo(Union::class);
+    }
+
+    public function village(): BelongsTo
+    {
+        return $this->belongsTo(Village::class);
+    }
+
+    /**
+     * The app stores the bcrypt hash in a custom `password_hash` column.
+     * Fortify and Auth expect this method to point at the right column.
+     */
+    public function getAuthPassword(): string
+    {
+        return $this->password_hash;
     }
 
     public function donations(): HasMany

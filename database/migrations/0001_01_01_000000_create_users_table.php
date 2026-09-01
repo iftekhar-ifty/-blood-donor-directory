@@ -22,9 +22,8 @@ return new class extends Migration
             
             // Blood & Location Info
             $table->string('blood_group', 3);
-            $table->foreignId('district_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('union_name', 100)->nullable();
-            $table->string('village_name', 100)->nullable();
+            $table->foreignId('union_id')->nullable()->constrained('unions')->nullOnDelete();
+            $table->foreignId('village_id')->nullable()->constrained('villages')->nullOnDelete();
             
             // Status & Privacy
             $table->boolean('is_available')->default(true);
@@ -36,9 +35,9 @@ return new class extends Migration
             $table->timestamps();
             
             // Indexes for Directory Search & Filtering
-            $table->index(['name']); 
-            $table->index(['district_id', 'union_name', 'village_name']);
-            $table->index(['blood_group', 'is_available', 'district_id']);
+            $table->index(['name']);
+            $table->index(['union_id', 'village_id']);
+            $table->index(['blood_group', 'is_available', 'union_id']);
             $table->index(['last_donation_date']);
         });
 
@@ -50,7 +49,7 @@ return new class extends Migration
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
+            $table->foreignUuid('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');

@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rokto Bondhu — Blood Donor Directory</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        blood: '#B0142A',
+        'blood-deep': '#7C0F1F',
+        'blood-tint': '#FBEEF1',
+        ink: '#16161A',
+        'ink-soft': '#54545C',
+        'ink-mute': '#8C8C94',
+        line: '#E8E6E8',
+        'line-soft': '#F0EEF0',
+        bg: '#F6F5F7',
+        good: '#1B7A4A',
+        'good-tint': '#E8F3EC',
+      },
+      fontFamily: {
+        sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      }
+    }
+  }
+}
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    background: #C9C5CB;
+    color: #16161A;
+    overscroll-behavior-y: none;
+  }
+  [x-cloak] { display: none !important; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: "tnum"; }
+  
+  .app-shell {
+    max-width: 430px;
+    margin: 0 auto;
+    background: #F6F5F7;
+    min-height: 100vh;
+    position: relative;
+    box-shadow: 0 0 80px rgba(0,0,0,0.12);
+  }
+  
+  @media (min-width: 768px) {
+    body { padding: 28px 0; background: #B5B1B7; }
+    .app-shell {
+      min-height: calc(100vh - 56px);
+      border-radius: 36px;
+      overflow: hidden;
+      border: 1px solid #A4A0A6;
+    }
+  }
+  
+  .view-enter { animation: viewIn 0.28s ease-out; }
+  @keyframes viewIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #ececee 25%, #f5f4f6 50%, #ececee 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  .sheet-enter { animation: sheetIn 0.32s cubic-bezier(0.2, 0.9, 0.3, 1); }
+  @keyframes sheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .dialog-enter { animation: dialogIn 0.25s cubic-bezier(0.2, 0.9, 0.3, 1); }
+  @keyframes dialogIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  .backdrop-enter { animation: fadeIn 0.22s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  
+  .toast-enter { animation: toastIn 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes pulseRing {
+    0% { transform: scale(1); opacity: 0.35; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+  .pulse-ring { animation: pulseRing 2.6s ease-out infinite; }
+  
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+    outline: 2px solid #B0142A;
+    outline-offset: 2px;
+  }
+  
+  .avatar-a { background: #FBE7E9; color: #9A1227; }
+  .avatar-b { background: #E8F0FB; color: #1E4D8C; }
+  .avatar-c { background: #FBF3E7; color: #8C4F0B; }
+  .avatar-d { background: #EAF3EA; color: #1B7A4A; }
+  
+  .no-scroll::-webkit-scrollbar { width: 0; height: 0; }
+  .no-scroll { scrollbar-width: none; }
+  
+  .donor-card { position: relative; }
+  .donor-card.is-available::before {
+    content: '';
+    position: absolute;
+    left: -1px; top: 14px; bottom: 14px;
+    width: 3px;
+    background: #1B7A4A;
+    border-radius: 0 2px 2px 0;
+  }
+  
+  input[type=date]::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+  }
+  
+  .bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .pulse-ring { animation: none; }
+  }
+</style>
+</head>
+<body x-data="donorApp()" x-cloak>
+
+<div class="app-shell flex flex-col">
+
+  <main class="flex-1">
+
+    <!-- ============== SPLASH ============== -->
+    <template x-if="view === 'splash'">
+      <div class="view-enter min-h-screen flex flex-col justify-between px-6 pt-10 pb-8 bg-white">
+        <div class="flex items-center gap-2">
+          <svg class="w-7 h-7 text-blood" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z" fill="currentColor"/>
+          </svg>
+          <span class="text-[16px] font-bold tracking-tight">Rokto Bondhu</span>
+        </div>
+        
+        <div class="flex flex-col items-center text-center max-w-[300px] mx-auto">
+          <div class="relative mb-10">
+            <div class="absolute inset-0 rounded-full border-2 border-blood pulse-ring"></div>
+            <div class="w-28 h-28 rounded-full bg-blood-tint flex items-center justify-center relative">
+              <svg class="w-14 h-14 text-blood" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z" fill="currentColor"/>
+              </svg>
+            </div>
+          </div>
+          
+          <h1 class="text-[28px] leading-[1.15] font-bold tracking-tight text-ink">
+            Blood donors,<br/>one tap away.
+          </h1>
+          <p class="text-[14.5px] text-ink-soft mt-3.5 leading-relaxed px-2">
+            Register as a donor. Help someone in your area find the right blood group when they need it most.
+          </p>
+        </div>
+        
+        <div class="space-y-2">
+          <button @click="view = 'register'" class="w-full bg-blood text-white py-3.5 rounded-lg font-semibold text-[15px] hover:bg-blood-deep active:scale-[0.99] transition">
+            Become a Donor
+          </button>
+          <button @click="view = 'login'" class="w-full text-ink py-2.5 text-[14px] font-medium">
+            Already have an account? <span class="text-blood font-semibold">Login</span>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- ============== LOGIN ============== -->
+    <template x-if="view === 'login'">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-white border-b border-line">
+          <div class="px-2 py-3 flex items-center gap-2">
+            <button @click="view = 'splash'" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-line-soft" aria-label="Go back">
+              <svg class="w-5 h-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <h1 class="text-[16px] font-semibold">Login</h1>
+          </div>
+        </div>
+        
+        <div class="px-4 py-6">
+          <div class="text-center mb-6">
+            <div class="w-16 h-16 mx-auto rounded-full bg-blood-tint flex items-center justify-center mb-3">
+              <svg class="w-8 h-8 text-blood" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z"/></svg>
+            </div>
+            <h2 class="text-[20px] font-bold tracking-tight">Welcome back</h2>
+            <p class="text-[13px] text-ink-soft mt-1">Login to manage your donor profile</p>
+          </div>
+          
+          <form @submit.prevent="submitLogin()" class="space-y-3">
+            <div>
+              <label for="login-id" class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Phone Number / Username</label>
+              <input id="login-id" type="text" x-model="loginForm.identifier" placeholder="01XXXXXXXXX or username" class="w-full px-3 py-3 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+            </div>
+            <div>
+              <label for="login-pass" class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Password</label>
+              <input id="login-pass" type="password" x-model="loginForm.password" placeholder="Enter your password" class="w-full px-3 py-3 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+            </div>
+            
+            <button type="submit" class="w-full bg-blood text-white py-3.5 rounded-lg font-semibold text-[15px] hover:bg-blood-deep active:scale-[0.99] transition">
+              Login
+            </button>
+          </form>
+          
+          <div class="flex items-center justify-between mt-4 text-[12.5px]">
+            <button @click="showToast('Password reset not available in demo', 'info')" class="text-ink-soft hover:text-blood">Forgot Password?</button>
+            <button @click="view = 'register'" class="text-blood font-semibold">Create New Profile</button>
+          </div>
+          
+          <div class="mt-8 p-3 bg-blood-tint rounded-lg text-[12px] text-ink-soft leading-relaxed border border-blood/10">
+            <strong class="text-blood">Demo:</strong> Enter any identifier and password, then click Login to explore.
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ============== REGISTER ============== -->
+    <template x-if="view === 'register'">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-white border-b border-line">
+          <div class="px-2 py-3 flex items-center gap-2">
+            <button @click="view = 'splash'" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-line-soft" aria-label="Go back">
+              <svg class="w-5 h-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <h1 class="text-[16px] font-semibold">Become a Blood Donor</h1>
+          </div>
+        </div>
+        
+        <div class="px-4 py-4">
+          <p class="text-[13.5px] text-ink-soft mb-5 leading-relaxed">
+            Create your donor profile and help someone find the right blood group when they need it.
+          </p>
+          
+          <form @submit.prevent="submitRegister()">
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Personal Information</div>
+            <div class="bg-white border border-line rounded-lg p-3.5 space-y-3 mb-4">
+              <div>
+                <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Full Name *</label>
+                <input type="text" x-model="registerForm.name" placeholder="Md. Rahim Ahmed" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+              </div>
+              <div>
+                <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Phone Number *</label>
+                <input type="tel" x-model="registerForm.phone" placeholder="01XXXXXXXXX" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none mono">
+              </div>
+              <div>
+                <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Unique Username *</label>
+                <input type="text" x-model="registerForm.username" placeholder="rahim_ahmed" 
+                  class="w-full px-3 py-2.5 text-[14px] bg-white border rounded-md focus:border-blood outline-none mono"
+                  :class="usernameStatus === 'taken' ? 'border-blood' : usernameStatus === 'available' ? 'border-good' : 'border-line'">
+                <template x-if="usernameStatus === 'available'">
+                  <p class="text-[11.5px] text-good mt-1 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-9"/></svg>
+                    Username available
+                  </p>
+                </template>
+                <template x-if="usernameStatus === 'taken'">
+                  <p class="text-[11.5px] text-blood mt-1 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                    Username already taken
+                  </p>
+                </template>
+              </div>
+            </div>
+            
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Location Information</div>
+            <div class="bg-white border border-line rounded-lg p-3.5 space-y-3 mb-4">
+              <div>
+                <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">District (Zila) *</label>
+                <select x-model="registerForm.district" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+                  <option value="">Select district</option>
+                  <template x-for="d in districts" :key="d">
+                    <option :value="d" x-text="d"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Union</label>
+                <input type="text" x-model="registerForm.union" placeholder="Barura Union" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+              </div>
+              <div>
+                <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Village</label>
+                <input type="text" x-model="registerForm.village" placeholder="West Village" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+              </div>
+            </div>
+            
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Blood Information</div>
+            <div class="bg-white border border-line rounded-lg p-3.5 mb-4">
+              <label class="block text-[12.5px] font-medium text-ink-soft mb-2">Blood Group *</label>
+              <div class="grid grid-cols-4 gap-2">
+                <template x-for="bg in bloodGroups" :key="bg">
+                  <button type="button" @click="registerForm.bloodGroup = bg"
+                    :class="registerForm.bloodGroup === bg ? 'bg-blood text-white border-blood' : 'bg-white text-ink border-line hover:border-blood/40'"
+                    class="py-2.5 text-[14px] font-bold rounded-md border transition mono" x-text="bg"></button>
+                </template>
+              </div>
+            </div>
+            
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Donor Status</div>
+            <div class="bg-white border border-line rounded-lg p-3.5 mb-4">
+              <p class="text-[13.5px] font-medium text-ink mb-1.5">Are you currently available to donate blood?</p>
+              <p class="text-[12px] text-ink-soft mb-3 leading-relaxed">People can see your availability when searching for donors.</p>
+              <div class="flex gap-2">
+                <button type="button" @click="registerForm.available = true"
+                  :class="registerForm.available ? 'border-blood bg-blood-tint' : 'border-line bg-white'"
+                  class="flex-1 py-3 border-2 rounded-md text-center transition">
+                  <div class="w-2.5 h-2.5 rounded-full bg-good mx-auto mb-1.5"></div>
+                  <div class="text-[12.5px] font-semibold text-ink">Available</div>
+                </button>
+                <button type="button" @click="registerForm.available = false"
+                  :class="!registerForm.available ? 'border-ink-soft bg-line-soft' : 'border-line bg-white'"
+                  class="flex-1 py-3 border-2 rounded-md text-center transition">
+                  <div class="w-2.5 h-2.5 rounded-full bg-ink-mute mx-auto mb-1.5"></div>
+                  <div class="text-[12.5px] font-semibold text-ink">Not Available</div>
+                </button>
+              </div>
+            </div>
+            
+            <button type="submit" class="w-full bg-blood text-white py-3.5 rounded-lg font-semibold text-[15px] hover:bg-blood-deep active:scale-[0.99] transition mb-3">
+              Create Donor Profile
+            </button>
+            
+            <button type="button" @click="view = 'login'" class="w-full text-center text-[13px] text-ink-soft py-2">
+              Already have an account? <span class="text-blood font-semibold">Login</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </template>
+
+    <!-- ============== DIRECTORY (Home + Search tabs) ============== -->
+    <template x-if="view === 'directory'">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-bg border-b border-line">
+          <div class="bg-white px-4 py-3 flex items-center justify-between border-b border-line-soft">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-blood" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z"/>
+              </svg>
+              <h1 class="text-[16px] font-semibold" x-text="activeTab === 'search' ? 'Find Donors' : 'Blood Donors'"></h1>
+            </div>
+            <button @click="setTab('profile')" class="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold" :class="avatarColor(currentUser.name)" x-text="initials(currentUser.name)" :aria-label="'View your profile'"></button>
+          </div>
+          
+          <div class="px-4 py-2.5 flex gap-2 bg-bg">
+            <div class="flex-1 relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-mute pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"/>
+                <path d="m20 20-3.5-3.5"/>
+              </svg>
+              <input x-model="searchQuery" type="search" placeholder="Search name, village, blood group..." class="w-full pl-9 pr-3 py-2.5 text-[14px] bg-white border border-line rounded-lg focus:border-blood outline-none" aria-label="Search donors">
+            </div>
+            <button @click="filterModalOpen = true" class="relative px-3 border border-line rounded-lg bg-white flex items-center gap-1.5 text-[13px] font-medium hover:bg-line-soft" aria-label="Open filters">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 5h18M6 12h12M10 19h4"/>
+              </svg>
+              <span>Filter</span>
+              <span x-show="activeFilterCount > 0" x-cloak class="bg-blood text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center" x-text="activeFilterCount"></span>
+            </button>
+          </div>
+          
+          <div x-show="activeTab === 'search'" x-cloak class="px-4 pb-2.5 flex gap-1.5 overflow-x-auto no-scroll bg-bg">
+            <button @click="filters.bloodGroup = 'all'" :class="filters.bloodGroup === 'all' ? 'bg-blood text-white' : 'bg-white text-ink border border-line'" class="px-3 py-1.5 text-[12px] font-semibold rounded-full whitespace-nowrap">All</button>
+            <template x-for="bg in bloodGroups" :key="bg">
+              <button @click="filters.bloodGroup = bg" :class="filters.bloodGroup === bg ? 'bg-blood text-white' : 'bg-white text-ink border border-line'" class="px-3 py-1.5 text-[12px] font-bold rounded-full whitespace-nowrap mono" x-text="bg"></button>
+            </template>
+          </div>
+        </div>
+        
+        <div class="px-4 py-3">
+          <div class="mb-3">
+            <h2 class="text-[18px] font-bold tracking-tight">Find Blood Donors</h2>
+            <p class="text-[12.5px] text-ink-soft mt-0.5">
+              <span x-text="totalDonors"></span> Donors · <span x-text="availableDonors"></span> Available · 8 Blood Groups
+            </p>
+          </div>
+          
+          <div x-show="activeFilterCount > 0" x-cloak class="flex flex-wrap gap-1.5 mb-3">
+            <template x-if="filters.bloodGroup !== 'all'">
+              <button @click="filters.bloodGroup = 'all'" class="bg-blood-tint text-blood text-[12px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span class="mono font-bold" x-text="filters.bloodGroup"></span>
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </template>
+            <template x-if="filters.availability !== 'all'">
+              <button @click="filters.availability = 'all'" class="bg-blood-tint text-blood text-[12px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span x-text="filters.availability === 'available' ? 'Available' : 'Unavailable'"></span>
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </template>
+            <template x-if="filters.district !== 'all'">
+              <button @click="filters.district = 'all'" class="bg-blood-tint text-blood text-[12px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span x-text="filters.district"></span>
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </template>
+            <template x-if="filters.donationStatus !== 'all'">
+              <button @click="filters.donationStatus = 'all'" class="bg-blood-tint text-blood text-[12px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span x-text="formatDonationStatus(filters.donationStatus)"></span>
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </template>
+          </div>
+          
+          <div class="space-y-2.5">
+            <template x-if="searching">
+              <template x-for="i in 4" :key="i">
+                <div class="bg-white border border-line rounded-lg p-3.5">
+                  <div class="flex items-start gap-3">
+                    <div class="w-11 h-11 rounded-full skeleton"></div>
+                    <div class="flex-1">
+                      <div class="h-3.5 w-2/3 skeleton mb-2"></div>
+                      <div class="h-3 w-1/2 skeleton mb-2"></div>
+                      <div class="h-2.5 w-1/3 skeleton"></div>
+                    </div>
+                  </div>
+                  <div class="flex gap-2 mt-3 pt-3 border-t border-line-soft">
+                    <div class="flex-1 h-8 skeleton"></div>
+                    <div class="flex-1 h-8 skeleton"></div>
+                  </div>
+                </div>
+              </template>
+            </template>
+            
+            <template x-if="!searching && filteredDonors.length === 0">
+              <div class="text-center py-12">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blood-tint flex items-center justify-center">
+                  <svg class="w-8 h-8 text-blood" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="m20 20-3.5-3.5M8 11h6"/>
+                  </svg>
+                </div>
+                <h3 class="text-[16px] font-semibold text-ink mb-1.5">No donors found</h3>
+                <p class="text-[13px] text-ink-soft mb-5 max-w-[240px] mx-auto leading-relaxed">Try changing your blood group, location, or availability filter.</p>
+                <button @click="clearSearch()" class="text-[13px] font-semibold text-blood border border-blood px-4 py-2 rounded-md hover:bg-blood-tint transition">Clear Filters</button>
+              </div>
+            </template>
+            
+            <template x-if="!searching && filteredDonors.length > 0">
+              <template x-for="donor in filteredDonors" :key="donor.id">
+                <article class="bg-white border border-line rounded-lg p-3.5 donor-card" :class="donor.available ? 'is-available' : ''">
+                  <div class="flex items-start gap-3">
+                    <div class="w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0" :class="avatarColor(donor.name)" x-text="initials(donor.name)"></div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2">
+                        <h3 class="text-[15px] font-semibold text-ink leading-tight" x-text="donor.name"></h3>
+                        <span class="bg-blood text-white text-[11px] font-bold px-2 py-0.5 rounded mono flex-shrink-0" x-text="donor.bloodGroup"></span>
+                      </div>
+                      <div class="flex items-center gap-1 mt-1 text-[12.5px] text-ink-soft">
+                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 22s-7-7-7-12a7 7 0 1 1 14 0c0 5-7 12-7 12z"/>
+                          <circle cx="12" cy="10" r="2.5"/>
+                        </svg>
+                        <span class="truncate" x-text="donor.union + ', ' + donor.district"></span>
+                      </div>
+                      <div class="flex items-center gap-1.5 mt-1.5 text-[11.5px]">
+                        <span class="flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full" :class="donor.available ? 'bg-good' : 'bg-ink-mute'"></span>
+                          <span class="font-medium" :class="donor.available ? 'text-good' : 'text-ink-soft'" x-text="donor.available ? 'Available' : 'Unavailable'"></span>
+                        </span>
+                        <span class="text-line">·</span>
+                        <span class="text-ink-soft" x-text="donor.donations.length > 0 ? 'Last: ' + formatDate(donor.donations[0].date) : 'Never donated'"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex gap-2 mt-3 pt-3 border-t border-line-soft">
+                    <button @click="openDonor(donor.id)" class="flex-1 text-[12.5px] font-medium text-ink border border-line rounded-md py-2 hover:bg-line-soft transition">View Profile</button>
+                    <button @click="callDonor(donor.phone)" class="flex-1 text-[12.5px] font-semibold text-white bg-blood rounded-md py-2 hover:bg-blood-deep transition flex items-center justify-center gap-1.5">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.2 2.2z"/></svg>
+                      Call Donor
+                    </button>
+                  </div>
+                </article>
+              </template>
+            </template>
+          </div>
+          
+          <div x-show="!searching && filteredDonors.length > 0" class="text-center text-[12px] text-ink-mute mt-4 mb-2">
+            Showing <span x-text="filteredDonors.length"></span> donor<span x-show="filteredDonors.length !== 1">s</span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ============== DONOR PROFILE (others) ============== -->
+    <template x-if="view === 'donorProfile' && selectedDonor">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-white border-b border-line">
+          <div class="px-2 py-3 flex items-center gap-2">
+            <button @click="navigate('directory')" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-line-soft" aria-label="Go back">
+              <svg class="w-5 h-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <h1 class="text-[16px] font-semibold">Donor Profile</h1>
+          </div>
+        </div>
+        
+        <div class="px-4 py-5">
+          <div class="flex flex-col items-center text-center mb-5">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-[24px] font-bold mb-3" :class="avatarColor(selectedDonor.name)" x-text="initials(selectedDonor.name)"></div>
+            <h2 class="text-[19px] font-bold tracking-tight" x-text="selectedDonor.name"></h2>
+            <p class="text-[13.5px] text-ink-soft mt-0.5" x-text="'@' + selectedDonor.username"></p>
+            <div class="mt-2 inline-flex items-center gap-1.5 bg-blood text-white px-3 py-1 rounded-full">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z"/></svg>
+              <span class="text-[14px] font-bold mono" x-text="selectedDonor.bloodGroup"></span>
+            </div>
+          </div>
+          
+          <div class="bg-white border border-line rounded-lg p-4 mb-3">
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Availability</div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" :class="selectedDonor.available ? 'bg-good' : 'bg-ink-mute'"></span>
+              <span class="text-[14px] font-semibold" :class="selectedDonor.available ? 'text-good' : 'text-ink-soft'" x-text="selectedDonor.available ? 'Available for donation' : 'Currently unavailable'"></span>
+            </div>
+          </div>
+          
+          <div class="bg-white border border-line rounded-lg p-4 mb-3">
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2.5">Location</div>
+            <div class="space-y-2 text-[13.5px]">
+              <div class="flex justify-between">
+                <span class="text-ink-soft">Village</span>
+                <span class="font-medium text-ink" x-text="selectedDonor.village"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-ink-soft">Union</span>
+                <span class="font-medium text-ink" x-text="selectedDonor.union"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-ink-soft">District</span>
+                <span class="font-medium text-ink" x-text="selectedDonor.district"></span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-white border border-line rounded-lg p-4 mb-4">
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2.5">Donation History</div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-[22px] font-bold text-ink" x-text="selectedDonor.donations.length"></div>
+                <div class="text-[12px] text-ink-soft">Total Donations</div>
+              </div>
+              <div>
+                <template x-if="selectedDonor.donations.length > 0">
+                  <div>
+                    <div class="text-[14px] font-semibold text-ink mono" x-text="formatDate(selectedDonor.donations[0].date)"></div>
+                    <div class="text-[12px] text-ink-soft">Last Donation</div>
+                  </div>
+                </template>
+                <template x-if="selectedDonor.donations.length === 0">
+                  <div>
+                    <div class="text-[14px] font-semibold text-ink-mute">—</div>
+                    <div class="text-[12px] text-ink-soft">Never Donated</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+          
+          <button @click="callDonor(selectedDonor.phone)" class="w-full bg-blood text-white py-3.5 rounded-lg font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-blood-deep active:scale-[0.99] transition">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.2 2.2z"/>
+            </svg>
+            Call Donor
+          </button>
+          
+          <p class="text-[11.5px] text-ink-mute text-center mt-3 px-4 leading-relaxed">
+            This is a public profile. Please contact the donor respectfully and only for blood donation purposes.
+          </p>
+        </div>
+      </div>
+    </template>
+
+    <!-- ============== MY PROFILE ============== -->
+    <template x-if="view === 'myProfile'">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-white border-b border-line">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <h1 class="text-[16px] font-semibold">My Profile</h1>
+            <button @click="openEditProfile()" class="text-blood text-[13px] font-semibold flex items-center gap-1">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4v16h16v-7M18.5 2.5l3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit
+            </button>
+          </div>
+        </div>
+        
+        <div class="px-4 py-5">
+          <div class="flex flex-col items-center text-center mb-5">
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-[24px] font-bold mb-3" :class="avatarColor(currentUser.name)" x-text="initials(currentUser.name)"></div>
+            <h2 class="text-[19px] font-bold tracking-tight" x-text="currentUser.name"></h2>
+            <p class="text-[13.5px] text-ink-soft mt-0.5" x-text="'@' + currentUser.username"></p>
+            <div class="mt-2 inline-flex items-center gap-1.5 bg-blood text-white px-3 py-1 rounded-full">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z"/></svg>
+              <span class="text-[14px] font-bold mono" x-text="currentUser.bloodGroup"></span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="bg-white border border-line rounded-lg p-3.5 text-center">
+              <div class="text-[22px] font-bold text-ink" x-text="currentUser.donations.length"></div>
+              <div class="text-[11.5px] text-ink-soft mt-0.5">Total Donations</div>
+            </div>
+            <div class="bg-white border border-line rounded-lg p-3.5 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <span class="w-2 h-2 rounded-full" :class="currentUser.available ? 'bg-good' : 'bg-ink-mute'"></span>
+                <span class="text-[13.5px] font-semibold" :class="currentUser.available ? 'text-good' : 'text-ink-soft'" x-text="currentUser.available ? 'Available' : 'Unavailable'"></span>
+              </div>
+              <div class="text-[11.5px] text-ink-soft mt-1.5">Current Status</div>
+            </div>
+          </div>
+          
+          <div class="bg-white border border-line rounded-lg p-4 mb-3">
+            <div class="flex items-center justify-between">
+              <div class="flex-1 min-w-0">
+                <div class="text-[14px] font-semibold text-ink">Donation Availability</div>
+                <div class="text-[12px] text-ink-soft mt-0.5">Toggle when you can donate blood</div>
+              </div>
+              <button @click="toggleAvailability()" 
+                :class="currentUser.available ? 'bg-good' : 'bg-ink-mute'" 
+                class="relative w-11 h-6 rounded-full transition-colors flex-shrink-0" 
+                :aria-label="currentUser.available ? 'Currently available, tap to become unavailable' : 'Currently unavailable, tap to become available'"
+                role="switch" :aria-checked="currentUser.available">
+                <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform" :class="currentUser.available ? 'translate-x-5' : ''"></span>
+              </button>
+            </div>
+            <div x-show="!currentUser.available" x-cloak class="mt-3 pt-3 border-t border-line-soft">
+              <label class="block text-[12px] text-ink-soft mb-1.5">Reason (optional, kept private)</label>
+              <select x-model="currentUser.unavailableReason" @change="updateDonorInList()" class="w-full px-3 py-2 text-[13.5px] bg-bg border border-line rounded-md outline-none focus:border-blood">
+                <option value="">Select reason</option>
+                <option value="Recently Donated">Recently Donated</option>
+                <option value="Sick">Sick</option>
+                <option value="Traveling">Traveling</option>
+                <option value="Personal Reason">Personal Reason</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="bg-white border border-line rounded-lg overflow-hidden mb-3">
+            <button @click="navigate('history')" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft transition text-left">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-blood" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <span class="text-[14px] font-medium text-ink">Donation History</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[12px] text-ink-soft" x-text="currentUser.donations.length + ' donations'"></span>
+                <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </div>
+            </button>
+            <button @click="addDonationOpen = true" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft border-t border-line-soft transition text-left">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-blood" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                <span class="text-[14px] font-medium text-ink">Add Donation Record</span>
+              </div>
+              <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+            <button @click="navigate('settings')" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft border-t border-line-soft transition text-left">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-blood" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span class="text-[14px] font-medium text-ink">Settings</span>
+              </div>
+              <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+          
+          <div class="bg-white border border-line rounded-lg p-4 mb-3">
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2.5">Contact & Location</div>
+            <div class="space-y-2 text-[13.5px]">
+              <div class="flex justify-between gap-3">
+                <span class="text-ink-soft flex-shrink-0">Phone</span>
+                <span class="font-medium mono text-ink" x-text="currentUser.phone"></span>
+              </div>
+              <div class="flex justify-between gap-3">
+                <span class="text-ink-soft flex-shrink-0">Village</span>
+                <span class="font-medium text-ink text-right" x-text="currentUser.village"></span>
+              </div>
+              <div class="flex justify-between gap-3">
+                <span class="text-ink-soft flex-shrink-0">Union</span>
+                <span class="font-medium text-ink text-right" x-text="currentUser.union"></span>
+              </div>
+              <div class="flex justify-between gap-3">
+                <span class="text-ink-soft flex-shrink-0">District</span>
+                <span class="font-medium text-ink text-right" x-text="currentUser.district"></span>
+              </div>
+            </div>
+          </div>
+          
+          <button @click="logout()" class="w-full text-[13.5px] font-semibold text-blood py-3 hover:bg-blood-tint rounded-lg transition">
+            Logout
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- ============== EDIT PROFILE ============== -->
+    <template x-if="view === 'editProfile'">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-white border-b border-line">
+          <div class="px-2 py-3 flex items-center gap-2">
+            <button @click="navigate('myProfile')" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-line-soft" aria-label="Cancel edit">
+              <svg class="w-5 h-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <h1 class="text-[16px] font-semibold">Edit Profile</h1>
+          </div>
+        </div>
+        
+        <form @submit.prevent="saveProfile()" class="px-4 py-4">
+          <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Personal Information</div>
+          <div class="bg-white border border-line rounded-lg p-3.5 space-y-3 mb-4">
+            <div>
+              <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Full Name</label>
+              <input type="text" x-model="editForm.name" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+            </div>
+            <div>
+              <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Phone Number</label>
+              <input type="tel" x-model="editForm.phone" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none mono">
+            </div>
+            <div>
+              <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Username</label>
+              <input type="text" x-model="editForm.username" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none mono">
+            </div>
+          </div>
+          
+          <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Blood Information</div>
+          <div class="bg-white border border-line rounded-lg p-3.5 mb-4">
+            <label class="block text-[12.5px] font-medium text-ink-soft mb-2">Blood Group</label>
+            <div class="grid grid-cols-4 gap-2">
+              <template x-for="bg in bloodGroups" :key="bg">
+                <button type="button" @click="editForm.bloodGroup = bg"
+                  :class="editForm.bloodGroup === bg ? 'bg-blood text-white border-blood' : 'bg-white text-ink border-line hover:border-blood/40'"
+                  class="py-2.5 text-[14px] font-bold rounded-md border transition mono" x-text="bg"></button>
+              </template>
+            </div>
+          </div>
+          
+          <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Location</div>
+          <div class="bg-white border border-line rounded-lg p-3.5 space-y-3 mb-4">
+            <div>
+              <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">District</label>
+              <select x-model="editForm.district" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+                <template x-for="d in districts" :key="d">
+                  <option :value="d" x-text="d"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Union</label>
+              <input type="text" x-model="editForm.union" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+            </div>
+            <div>
+              <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Village</label>
+              <input type="text" x-model="editForm.village" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+            </div>
+          </div>
+          
+          <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Donor Status</div>
+          <div class="bg-white border border-line rounded-lg p-3.5 mb-4">
+            <div class="flex gap-2">
+              <button type="button" @click="editForm.available = true"
+                :class="editForm.available ? 'border-blood bg-blood-tint' : 'border-line bg-white'"
+                class="flex-1 py-3 border-2 rounded-md text-center transition">
+                <div class="w-2.5 h-2.5 rounded-full bg-good mx-auto mb-1.5"></div>
+                <div class="text-[12.5px] font-semibold text-ink">Available</div>
+              </button>
+              <button type="button" @click="editForm.available = false"
+                :class="!editForm.available ? 'border-ink-soft bg-line-soft' : 'border-line bg-white'"
+                class="flex-1 py-3 border-2 rounded-md text-center transition">
+                <div class="w-2.5 h-2.5 rounded-full bg-ink-mute mx-auto mb-1.5"></div>
+                <div class="text-[12.5px] font-semibold text-ink">Unavailable</div>
+              </button>
+            </div>
+          </div>
+          
+          <button type="submit" class="w-full bg-blood text-white py-3.5 rounded-lg font-semibold text-[15px] hover:bg-blood-deep active:scale-[0.99] transition">
+            Save Changes
+          </button>
+        </form>
+      </div>
+    </template>
+
+    <!-- ============== SETTINGS ============== -->
+    <template x-if="view === 'settings'">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-white border-b border-line">
+          <div class="px-2 py-3 flex items-center gap-2">
+            <button @click="navigate('myProfile')" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-line-soft" aria-label="Go back">
+              <svg class="w-5 h-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <h1 class="text-[16px] font-semibold">Settings</h1>
+          </div>
+        </div>
+        
+        <div class="px-4 py-4 space-y-4">
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Account</div>
+            <div class="bg-white border border-line rounded-lg overflow-hidden">
+              <button @click="openEditProfile()" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft transition text-left">
+                <span class="text-[14px] font-medium text-ink">Edit Profile</span>
+                <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <button @click="showToast('Password change not available in demo', 'info')" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft border-t border-line-soft transition text-left">
+                <span class="text-[14px] font-medium text-ink">Change Password</span>
+                <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <button @click="showToast('Privacy settings not available in demo', 'info')" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft border-t border-line-soft transition text-left">
+                <span class="text-[14px] font-medium text-ink">Privacy Settings</span>
+                <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">Donation</div>
+            <div class="bg-white border border-line rounded-lg overflow-hidden">
+              <button @click="navigate('history')" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft transition text-left">
+                <span class="text-[14px] font-medium text-ink">Donation History</span>
+                <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+              <div class="px-4 py-3 flex items-center justify-between border-t border-line-soft">
+                <span class="text-[14px] font-medium text-ink">Last Donation</span>
+                <span class="text-[13px] text-ink-soft mono" x-text="currentUser.donations.length > 0 ? formatDate(currentUser.donations[0].date) : 'None yet'"></span>
+              </div>
+              <div class="px-4 py-3 flex items-center justify-between border-t border-line-soft">
+                <span class="text-[14px] font-medium text-ink">Total Donations</span>
+                <span class="text-[13px] text-ink-soft" x-text="currentUser.donations.length"></span>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2">About</div>
+            <div class="bg-white border border-line rounded-lg overflow-hidden">
+              <div class="px-4 py-3 flex items-center justify-between">
+                <span class="text-[14px] font-medium text-ink">App Version</span>
+                <span class="text-[13px] text-ink-soft mono">1.0.0</span>
+              </div>
+              <button @click="showToast('Terms not available in demo', 'info')" class="w-full px-4 py-3.5 flex items-center justify-between hover:bg-line-soft border-t border-line-soft transition text-left">
+                <span class="text-[14px] font-medium text-ink">Terms & Conditions</span>
+                <svg class="w-4 h-4 text-ink-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+          
+          <button @click="logout()" class="w-full bg-white border border-line text-[14px] font-semibold text-blood py-3 rounded-lg hover:bg-blood-tint transition">
+            Logout
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- ============== DONATION HISTORY ============== -->
+    <template x-if="view === 'history'">
+      <div class="view-enter min-h-screen bg-bg">
+        <div class="sticky top-0 z-20 bg-white border-b border-line">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <h1 class="text-[16px] font-semibold">My Donations</h1>
+            <button @click="addDonationOpen = true" class="text-blood text-[13px] font-semibold flex items-center gap-1" aria-label="Add donation">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Add
+            </button>
+          </div>
+        </div>
+        
+        <div class="px-4 py-4">
+          <div class="bg-white border border-line rounded-lg p-4 mb-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-[24px] font-bold text-ink" x-text="currentUser.donations.length"></div>
+                <div class="text-[12px] text-ink-soft">Total Donations</div>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold text-ink mono" x-text="currentUser.donations.length > 0 ? formatDate(currentUser.donations[0].date) : '—'"></div>
+                <div class="text-[12px] text-ink-soft">Last Donation</div>
+              </div>
+            </div>
+          </div>
+          
+          <template x-if="currentUser.donations.length === 0">
+            <div class="text-center py-12">
+              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blood-tint flex items-center justify-center">
+                <svg class="w-8 h-8 text-blood" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z"/></svg>
+              </div>
+              <h3 class="text-[16px] font-semibold text-ink mb-1.5">No donations recorded</h3>
+              <p class="text-[13px] text-ink-soft mb-5 max-w-[260px] mx-auto leading-relaxed">Your donation history will appear here after you record your first donation.</p>
+              <button @click="addDonationOpen = true" class="bg-blood text-white text-[13px] font-semibold px-4 py-2.5 rounded-lg hover:bg-blood-deep transition">Add Donation</button>
+            </div>
+          </template>
+          
+          <template x-if="currentUser.donations.length > 0">
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-3">Donation Timeline</div>
+              <div class="relative pl-6">
+                <div class="absolute left-[7px] top-3 bottom-3 w-px bg-line"></div>
+                <template x-for="donation in currentUser.donations" :key="donation.id">
+                  <div class="relative pb-3.5 last:pb-0">
+                    <div class="absolute -left-[18px] top-2 w-3.5 h-3.5 rounded-full bg-blood ring-4 ring-bg"></div>
+                    <div class="bg-white border border-line rounded-lg p-3.5">
+                      <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[13px] font-semibold text-ink mono" x-text="formatDate(donation.date)"></span>
+                        <span class="text-[10px] text-good bg-good-tint px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide" x-text="donation.status"></span>
+                      </div>
+                      <div class="text-[13px] text-ink mb-2" x-text="donation.location"></div>
+                      <div class="flex items-center gap-2 text-[11.5px] text-ink-mute flex-wrap">
+                        <span class="bg-blood-tint text-blood px-1.5 py-0.5 rounded font-medium" x-text="donation.type"></span>
+                        <template x-if="donation.hospital">
+                          <span x-text="'· ' + donation.hospital"></span>
+                        </template>
+                      </div>
+                      <template x-if="donation.notes">
+                        <p class="text-[12px] text-ink-soft mt-2 italic leading-relaxed" x-text="'\"' + donation.notes + '\"'"></p>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+  </main>
+
+  <!-- ============== BOTTOM NAVIGATION ============== -->
+  <nav x-show="showBottomNav" x-cloak x-transition class="sticky bottom-0 z-30 bg-white border-t border-line bottom-nav">
+    <div class="grid grid-cols-4 max-w-[430px] mx-auto">
+      <button @click="setTab('home')" 
+        :class="activeTab === 'home' ? 'text-blood' : 'text-ink-mute'"
+        class="flex flex-col items-center gap-0.5 py-2.5 active:bg-line-soft transition" aria-label="Donors">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.5C12 2.5 5.5 10 5.5 15a6.5 6.5 0 0 0 13 0c0-5-6.5-12.5-6.5-12.5z"/>
+        </svg>
+        <span class="text-[10.5px] font-medium">Donors</span>
+      </button>
+      <button @click="setTab('search')" 
+        :class="activeTab === 'search' ? 'text-blood' : 'text-ink-mute'"
+        class="flex flex-col items-center gap-0.5 py-2.5 active:bg-line-soft transition" aria-label="Find">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m20 20-3.5-3.5"/>
+        </svg>
+        <span class="text-[10.5px] font-medium">Find</span>
+      </button>
+      <button @click="setTab('history')" 
+        :class="activeTab === 'history' ? 'text-blood' : 'text-ink-mute'"
+        class="flex flex-col items-center gap-0.5 py-2.5 active:bg-line-soft transition" aria-label="My Donations">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 7v5l3 2"/>
+        </svg>
+        <span class="text-[10.5px] font-medium">Donations</span>
+      </button>
+      <button @click="setTab('profile')" 
+        :class="activeTab === 'profile' ? 'text-blood' : 'text-ink-mute'"
+        class="flex flex-col items-center gap-0.5 py-2.5 active :bg-line-soft transition" aria-label="Profile">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="7" r="4"/>
+          <path d="M5.5 21a6.5 6.5 0 0 1 13 0"/>
+        </svg>
+        <span class="text-[10.5px] font-medium">Profile</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============== FILTER MODAL ============== -->
+  <div x-show="filterModalOpen" x-cloak @keydown.escape.window="filterModalOpen = false" class="fixed inset-0 z-50 flex items-end justify-center" aria-modal="true" role="dialog">
+    <div x-show="filterModalOpen" x-transition.opacity class="absolute inset-0 bg-black/40 backdrop-enter" @click="filterModalOpen = false"></div>
+    <div x-show="filterModalOpen" class="relative w-full max-w-[430px] bg-white rounded-t-2xl sheet-enter max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between px-4 py-3.5 border-b border-line">
+        <div class="flex items-center gap-2">
+          <h2 class="text-[16px] font-semibold">Filters</h2>
+          <span x-show="activeFilterCount > 0" x-cloak class="text-[12px] text-ink-mute">· <span x-text="activeFilterCount"></span> active</span>
+        </div>
+        <button @click="filterModalOpen = false" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-line-soft" aria-label="Close filters">
+          <svg class="w-4 h-4 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      
+      <div class="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+        <div>
+          <h3 class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2.5">Blood Group</h3>
+          <div class="grid grid-cols-4 gap-2">
+            <button @click="filters.bloodGroup = 'all'" :class="filters.bloodGroup === 'all' ? 'bg-blood text-white border-blood' : 'bg-white text-ink border-line'" class="py-2 text-[12.5px] font-semibold rounded-md border">All</button>
+            <template x-for="bg in bloodGroups" :key="bg">
+              <button @click="filters.bloodGroup = bg" :class="filters.bloodGroup === bg ? 'bg-blood text-white border-blood' : 'bg-white text-ink border-line'" class="py-2 text-[13px] font-bold rounded-md border mono" x-text="bg"></button>
+            </template>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2.5">Availability</h3>
+          <div class="space-y-1.5">
+            <button @click="filters.availability = 'all'" :class="filters.availability === 'all' ? 'border-blood bg-blood-tint' : 'border-line bg-white'" class="w-full px-3 py-2.5 border rounded-md flex items-center justify-between text-left">
+              <span class="text-[13.5px] font-medium text-ink">All Donors</span>
+              <div class="w-4 h-4 rounded-full border" :class="filters.availability === 'all' ? 'border-blood bg-blood' : 'border-line'"></div>
+            </button>
+            <button @click="filters.availability = 'available'" :class="filters.availability === 'available' ? 'border-blood bg-blood-tint' : 'border-line bg-white'" class="w-full px-3 py-2.5 border rounded-md flex items-center justify-between text-left">
+              <span class="flex items-center gap-2 text-[13.5px] font-medium text-ink">
+                <span class="w-2 h-2 rounded-full bg-good"></span>
+                Available Now
+              </span>
+              <div class="w-4 h-4 rounded-full border" :class="filters.availability === 'available' ? 'border-blood bg-blood' : 'border-line'"></div>
+            </button>
+            <button @click="filters.availability = 'unavailable'" :class="filters.availability === 'unavailable' ? 'border-blood bg-blood-tint' : 'border-line bg-white'" class="w-full px-3 py-2.5 border rounded-md flex items-center justify-between text-left">
+              <span class="flex items-center gap-2 text-[13.5px] font-medium text-ink">
+                <span class="w-2 h-2 rounded-full bg-ink-mute"></span>
+                Not Available
+              </span>
+              <div class="w-4 h-4 rounded-full border" :class="filters.availability === 'unavailable' ? 'border-blood bg-blood' : 'border-line'"></div>
+            </button>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2.5">Location (District)</h3>
+          <select x-model="filters.district" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+            <option value="all">All Districts</option>
+            <template x-for="d in districts" :key="d">
+              <option :value="d" x-text="d"></option>
+            </template>
+          </select>
+        </div>
+        
+        <div>
+          <h3 class="text-[11px] uppercase tracking-[0.08em] font-semibold text-ink-mute mb-2.5">Donation Status</h3>
+          <div class="space-y-1.5">
+            <button @click="filters.donationStatus = 'all'" :class="filters.donationStatus === 'all' ? 'border-blood bg-blood-tint' : 'border-line bg-white'" class="w-full px-3 py-2.5 border rounded-md flex items-center justify-between text-left">
+              <span class="text-[13.5px] font-medium text-ink">All</span>
+              <div class="w-4 h-4 rounded-full border" :class="filters.donationStatus === 'all' ? 'border-blood bg-blood' : 'border-line'"></div>
+            </button>
+            <button @click="filters.donationStatus = 'never'" :class="filters.donationStatus === 'never' ? 'border-blood bg-blood-tint' : 'border-line bg-white'" class="w-full px-3 py-2.5 border rounded-md flex items-center justify-between text-left">
+              <span class="text-[13.5px] font-medium text-ink">Never Donated</span>
+              <div class="w-4 h-4 rounded-full border" :class="filters.donationStatus === 'never' ? 'border-blood bg-blood' : 'border-line'"></div>
+            </button>
+            <button @click="filters.donationStatus = 'recent'" :class="filters.donationStatus === 'recent' ? 'border-blood bg-blood-tint' : 'border-line bg-white'" class="w-full px-3 py-2.5 border rounded-md flex items-center justify-between text-left">
+              <span class="text-[13.5px] font-medium text-ink">Recently Donated (90 days)</span>
+              <div class="w-4 h-4 rounded-full border" :class="filters.donationStatus === 'recent' ? 'border-blood bg-blood' : 'border-line'"></div>
+            </button>
+            <button @click="filters.donationStatus = 'before'" :class="filters.donationStatus === 'before' ? 'border-blood bg-blood-tint' : 'border-line bg-white'" class="w-full px-3 py-2.5 border rounded-md flex items-center justify-between text-left">
+              <span class="text-[13.5px] font-medium text-ink">Donated Before</span>
+              <div class="w-4 h-4 rounded-full border" :class="filters.donationStatus === 'before' ? 'border-blood bg-blood' : 'border-line'"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="px-4 py-3 border-t border-line flex gap-2 bg-white">
+        <button @click="clearFilters()" class="flex-1 border border-line text-ink text-[14px] font-medium py-3 rounded-md hover:bg-line-soft transition">Clear All</button>
+        <button @click="filterModalOpen = false" class="flex-1 bg-blood text-white text-[14px] font-semibold py-3 rounded-md hover:bg-blood-deep transition">Apply Filters</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== ADD DONATION MODAL ============== -->
+  <div x-show="addDonationOpen" x-cloak @keydown.escape.window="addDonationOpen = false" class="fixed inset-0 z-50 flex items-end justify-center" aria-modal="true" role="dialog">
+    <div x-show="addDonationOpen" x-transition.opacity class="absolute inset-0 bg-black/40 backdrop-enter" @click="addDonationOpen = false"></div>
+    <div x-show="addDonationOpen" class="relative w-full max-w-[430px] bg-white rounded-t-2xl sheet-enter max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between px-4 py-3.5 border-b border-line">
+        <h2 class="text-[16px] font-semibold">Add Donation Record</h2>
+        <button @click="addDonationOpen = false" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-line-soft" aria-label="Close">
+          <svg class="w-4 h-4 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      
+      <form @submit.prevent="saveDonation()" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div>
+          <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Donation Date *</label>
+          <input type="date" x-model="newDonation.date" required class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none mono">
+        </div>
+        <div>
+          <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Donation Location *</label>
+          <input type="text" x-model="newDonation.location" placeholder="Chattogram Medical College" required class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+        </div>
+        <div>
+          <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Donation Type *</label>
+          <div class="grid grid-cols-3 gap-2">
+            <template x-for="type in ['Whole Blood', 'Platelets', 'Plasma']" :key="type">
+              <button type="button" @click="newDonation.type = type" :class="newDonation.type === type ? 'bg-blood text-white border-blood' : 'bg-white text-ink border-line'" class="py-2.5 text-[12.5px] font-medium rounded-md border transition" x-text="type"></button>
+            </template>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Hospital / Organization (optional)</label>
+          <input type="text" x-model="newDonation.hospital" placeholder="Hospital name" class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none">
+        </div>
+        <div>
+          <label class="block text-[12.5px] font-medium text-ink-soft mb-1.5">Notes (optional)</label>
+          <textarea x-model="newDonation.notes" rows="3" placeholder="Any notes about this donation..." class="w-full px-3 py-2.5 text-[14px] bg-white border border-line rounded-md focus:border-blood outline-none resize-none"></textarea>
+        </div>
+        
+        <button type="submit" class="w-full bg-blood text-white py-3.5 rounded-lg font-semibold text-[15px] hover:bg-blood-deep transition mt-2">
+          Save Donation Record
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============== CALL CONFIRMATION ============== -->
+  <div x-show="callConfirmOpen" x-cloak @keydown.escape.window="callConfirmOpen = false" class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+    <div x-show="callConfirmOpen" x-transition.opacity class="absolute inset-0 bg-black/50 backdrop-enter" @click="callConfirmOpen = false"></div>
+    <div x-show="callConfirmOpen" class="relative w-full max-w-[320px] bg-white rounded-2xl p-5 dialog-enter text-center">
+      <div class="w-14 h-14 mx-auto rounded-full bg-blood-tint flex items-center justify-center mb-3">
+        <svg class="w-7 h-7 text-blood" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.2 2.2z"/>
+        </svg>
+      </div>
+      <h3 class="text-[16px] font-semibold mb-1">Call this donor?</h3>
+      <p class="text-[13px] text-ink-soft mb-1">Their phone number will be dialed directly.</p>
+      <p class="text-[15px] font-bold mono mb-4" x-text="callPhoneNumber"></p>
+      <div class="flex gap-2">
+        <button @click="callConfirmOpen = false" class="flex-1 border border-line text-ink text-[14px] font-medium py-2.5 rounded-md hover:bg-line-soft">Cancel</button>
+        <a :href="'tel:' + callPhoneNumber" @click="callConfirmOpen = false" class="flex-1 bg-blood text-white text-[14px] font-semibold py-2.5 rounded-md hover:bg-blood-deep">Call Now</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== LOGOUT CONFIRMATION ============== -->
+  <div x-show="logoutConfirmOpen" x-cloak @keydown.escape.window="logoutConfirmOpen = false" class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+    <div x-show="logoutConfirmOpen" x-transition.opacity class="absolute inset-0 bg-black/50 backdrop-enter" @click="logoutConfirmOpen = false"></div>
+    <div x-show="logoutConfirmOpen" class="relative w-full max-w-[320px] bg-white rounded-2xl p-5 dialog-enter text-center">
+      <h3 class="text-[16px] font-semibold mb-1.5">Logout?</h3>
+      <p class="text-[13px] text-ink-soft mb-4">You'll need to log back in to access your donor profile.</p>
+      <div class="flex gap-2">
+        <button @click="logoutConfirmOpen = false" class="flex-1 border border-line text-ink text-[14px] font-medium py-2.5 rounded-md hover:bg-line-soft">Cancel</button>
+        <button @click="confirmLogout()" class="flex-1 bg-blood text-white text-[14px] font-semibold py-2.5 rounded-md hover:bg-blood-deep">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== TOAST ============== -->
+  <div x-show="toast.show" x-cloak x-transition class="fixed bottom-20 left-1/2 -translate-x-1/2 z-[60] w-[92%] max-w-[380px]">
+    <div class="bg-ink text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2.5 toast-enter">
+      <template x-if="toast.type === 'success'">
+        <div class="w-6 h-6 rounded-full bg-good flex items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-9"/></svg>
+        </div>
+      </template>
+      <template x-if="toast.type === 'error'">
+        <div class="w-6 h-6 rounded-full bg-blood flex items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </div>
+      </template>
+      <template x-if="toast.type === 'info'">
+        <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+        </div>
+      </template>
+      <span class="text-[13.5px] font-medium flex-1" x-text="toast.message"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function donorApp() {
+  return {
+    view: 'splash',
+    activeTab: 'home',
+    
+    searchQuery: '',
+    searching: false,
+    searchTimer: null,
+    
+    filters: {
+      bloodGroup: 'all',
+      availability: 'all',
+      district: 'all',
+      donationStatus: 'all',
+    },
+    
+    filterModalOpen: false,
+    addDonationOpen: false,
+    callConfirmOpen: false,
+    logoutConfirmOpen: false,
+    callPhoneNumber: '',
+    
+    toast: { show: false, message: '', type: 'success' },
+    toastTimer: null,
+    
+    bloodGroups: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+    districts: ['Chattogram', 'Chandpur', 'Cumilla', 'Dhaka', 'Sylhet', 'Rajshahi', 'Khulna', 'Barishal', 'Rangpur', 'Mymensingh'],
+    
+    loginForm: { identifier: '', password: '' },
+    
+    registerForm: {
+      name: '', phone: '', username: '',
+      district: '', union: '', village: '',
+      bloodGroup: '',
+      available: true,
+    },
+    
+    editForm: {},
+    
+    newDonation: {
+      date: '', location: '', type: 'Whole Blood', hospital: '', notes: ''
+    },
+    
+    selectedDonorId: null,
+    
+    currentUser: {
+      id: 'me',
+      name: 'Ayesha Siddiqua',
+      username: 'ayesha_siddiqua',
+      phone: '01612345678',
+      bloodGroup: 'O+',
+      village: 'West Village',
+      union: 'Barura Union',
+      district: 'Chattogram',
+      available: true,
+      unavailableReason: '',
+      donations: [
+        { id: 1, date: '2026-08-12', location: 'Chattogram Medical College Hospital', type: 'Whole Blood', hospital: 'CMCH', notes: 'For emergency surgery patient', status: 'Completed' },
+        { id: 2, date: '2026-04-05', location: 'Local Blood Donation Camp', type: 'Whole Blood', hospital: 'Red Crescent', notes: '', status: 'Completed' },
+      ]
+    },
+    
+    donors: [
+      { id: 1, name: 'Md. Rahim Ahmed', username: 'rahim_ahmed', phone: '01711223344', bloodGroup: 'O+', village: 'West Village', union: 'Barura Union', district: 'Chattogram', available: true, donations: [{ id: 1, date: '2026-08-12', location: 'Chattogram Medical College', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 2, name: 'Abdul Karim', username: 'abdul_karim', phone: '01822334455', bloodGroup: 'A+', village: 'Kachua', union: 'Kachua Union', district: 'Chandpur', available: false, donations: [{ id: 1, date: '2026-07-20', location: 'Chandpur Sadar Hospital', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 3, name: 'Nusrat Jahan', username: 'nusrat_jahan', phone: '01988776655', bloodGroup: 'B+', village: 'Cumilla Sadar', union: 'Cumilla Union', district: 'Cumilla', available: true, donations: [{ id: 1, date: '2026-06-03', location: 'Cumilla Medical College', type: 'Platelets', status: 'Completed' }] },
+      { id: 4, name: 'Tanvir Hasan', username: 'tanvir_hasan', phone: '01766554433', bloodGroup: 'AB+', village: 'Mirpur', union: 'Mirpur Union', district: 'Dhaka', available: true, donations: [] },
+      { id: 5, name: 'Fahmida Akter', username: 'fahmida_akter', phone: '01622330011', bloodGroup: 'O-', village: 'Daudkandi', union: 'Daudkandi Union', district: 'Cumilla', available: false, donations: [{ id: 1, date: '2025-11-15', location: 'Daudkandi Health Complex', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 6, name: 'Imran Hossain', username: 'imran_hossain', phone: '01566778899', bloodGroup: 'A-', village: 'Brahmanbaria', union: 'Brahmanbaria Union', district: 'Cumilla', available: true, donations: [{ id: 1, date: '2026-09-01', location: 'Brahmanbaria Hospital', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 7, name: 'Sadia Islam', username: 'sadia_islam', phone: '01799887766', bloodGroup: 'B-', village: 'Sonaimuri', union: 'Sonaimuri Union', district: 'Noakhali', available: false, donations: [] },
+      { id: 8, name: 'Rakibul Islam', username: 'rakibul_islam', phone: '01877553311', bloodGroup: 'O+', village: 'Sitakunda', union: 'Sitakunda Union', district: 'Chattogram', available: true, donations: [{ id: 1, date: '2026-05-22', location: 'Sitakunda Health Complex', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 9, name: 'Mitu Akter', username: 'mitu_akter', phone: '01933221100', bloodGroup: 'AB-', village: 'Patiya', union: 'Patiya Union', district: 'Chattogram', available: true, donations: [{ id: 1, date: '2026-02-10', location: 'Patiya Upazila Health Complex', type: 'Plasma', status: 'Completed' }] },
+      { id: 10, name: 'Jamal Uddin', username: 'jamal_uddin', phone: '01755443322', bloodGroup: 'A+', village: 'Raozan', union: 'Raozan Union', district: 'Chattogram', available: false, donations: [{ id: 1, date: '2026-08-25', location: 'Raozan Hospital', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 11, name: 'Shahidul Alam', username: 'shahidul_alam', phone: '01899001122', bloodGroup: 'B+', village: 'Sandwip', union: 'Sandwip Union', district: 'Chattogram', available: true, donations: [{ id: 1, date: '2026-07-15', location: 'Sandwip Health Complex', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 12, name: 'Nasrin Sultana', username: 'nasrin_sultana', phone: '01644556677', bloodGroup: 'O+', village: 'Fatikchhari', union: 'Fatikchhari Union', district: 'Chattogram', available: true, donations: [] },
+      { id: 13, name: 'Anwar Hossain', username: 'anwar_hossain', phone: '01577889900', bloodGroup: 'A-', village: 'Hathazari', union: 'Hathazari Union', district: 'Chattogram', available: false, donations: [{ id: 1, date: '2026-09-10', location: 'Hathazari Hospital', type: 'Platelets', status: 'Completed' }] },
+      { id: 14, name: 'Rumana Akter', username: 'rumana_akter', phone: '01722334488', bloodGroup: 'AB+', village: 'Chandgaon', union: 'Chandgaon Union', district: 'Chattogram', available: true, donations: [{ id: 1, date: '2026-04-18', location: 'Chattogram Medical College', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 15, name: 'Belal Uddin', username: 'belal_uddin', phone: '01866778822', bloodGroup: 'B+', village: 'Anwara', union: 'Anwara Union', district: 'Chattogram', available: false, donations: [{ id: 1, date: '2025-10-05', location: 'Anwara Health Complex', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 16, name: 'Kamrul Hasan', username: 'kamrul_hasan', phone: '01988770011', bloodGroup: 'O-', village: 'Banshkhali', union: 'Banshkhali Union', district: 'Chattogram', available: true, donations: [{ id: 1, date: '2026-06-28', location: 'Banshkhali Hospital', type: 'Whole Blood', status: 'Completed' }] },
+      { id: 17, name: 'Shila Akter', username: 'shila_akter', phone: '01655440033', bloodGroup: 'A+', village: 'Lohagara', union: 'Lohagara Union', district: 'Chattogram', available: true, donations: [] },
+      { id: 18, name: 'Mizanur Rahman', username: 'mizanur_rahman', phone: '01733221166', bloodGroup: 'B-', village: 'Satkania', union: 'Satkania Union', district: 'Chattogram', available: false, donations: [{ id: 1, date: '2026-08-30', location: 'Satkania Hospital', type: 'Whole Blood', status: 'Completed' }] },
+    ],
+    
+    get usernameStatus() {
+      const u = this.registerForm.username.trim().toLowerCase();
+      if (!u) return 'empty';
+      if (u.length < 3) return 'short';
+      const taken = this.donors.some(d => d.username.toLowerCase() === u) || u === this.currentUser.username.toLowerCase();
+      return taken ? 'taken' : 'available';
+    },
+    
+    get filteredDonors() {
+      let list = this.donors.filter(d => d.id !== this.currentUser.id);
+      
+      if (this.searchQuery.trim()) {
+        const q = this.searchQuery.trim().toLowerCase();
+        list = list.filter(d => 
+          d.name.toLowerCase().includes(q) ||
+          d.username.toLowerCase().includes(q) ||
+          d.bloodGroup.toLowerCase().includes(q) ||
+          d.village.toLowerCase().includes(q) ||
+          d.union.toLowerCase().includes(q) ||
+          d.district.toLowerCase().includes(q)
+        );
+      }
+      
+      if (this.filters.bloodGroup !== 'all') {
+        list = list.filter(d => d.bloodGroup === this.filters.bloodGroup);
+      }
+      if (this.filters.availability !== 'all') {
+        list = list.filter(d => this.filters.availability === 'available' ? d.available : !d.available);
+      }
+      if (this.filters.district !== 'all') {
+        list = list.filter(d => d.district === this.filters.district);
+      }
+      if (this.filters.donationStatus !== 'all') {
+        const now = new Date();
+        list = list.filter(d => {
+          if (this.filters.donationStatus === 'never') return d.donations.length === 0;
+          if (this.filters.donationStatus === 'recent') {
+            if (d.donations.length === 0) return false;
+            const last = new Date(d.donations[0].date);
+            const days = (now - last) / (1000 * 60 * 60 * 24);
+            return days <= 90;
+          }
+          if (this.filters.donationStatus === 'before') return d.donations.length > 0;
+          return true;
+        });
+      }
+      return list;
+    },
+    
+    get activeFilterCount() {
+      let c = 0;
+      if (this.filters.bloodGroup !== 'all') c++;
+      if (this.filters.availability !== 'all') c++;
+      if (this.filters.district !== 'all') c++;
+      if (this.filters.donationStatus !== 'all') c++;
+      return c;
+    },
+    
+    get totalDonors() { return this.donors.length; },
+    get availableDonors() { return this.donors.filter(d => d.available).length; },
+    
+    get selectedDonor() {
+      if (!this.selectedDonorId) return null;
+      return this.donors.find(d => d.id === this.selectedDonorId) || null;
+    },
+    
+    get showBottomNav() {
+      return ['directory', 'myProfile', 'history', 'donorProfile', 'editProfile', 'settings'].includes(this.view);
+    },
+    
+    init() {
+      this.$watch('searchQuery', () => {
+        clearTimeout(this.searchTimer);
+        this.searching = true;
+        this.searchTimer = setTimeout(() => { this.searching = false; }, 400);
+      });
+    },
+    
+    navigate(v) {
+      this.view = v;
+      window.scrollTo(0, 0);
+    },
+    
+    setTab(tab) {
+      this.activeTab = tab;
+      if (tab === 'home' || tab === 'search') {
+        this.view = 'directory';
+      } else if (tab === 'history') {
+        this.view = 'history';
+      } else if (tab === 'profile') {
+        this.view = 'myProfile';
+      }
+      window.scrollTo(0, 0);
+    },
+    
+    submitLogin() {
+      if (!this.loginForm.identifier.trim()) {
+        this.showToast('Please enter your phone or username', 'error');
+        return;
+      }
+      this.showToast('Logged in successfully', 'success');
+      this.activeTab = 'home';
+      this.view = 'directory';
+      this.loginForm = { identifier: '', password: '' };
+    },
+    
+    submitRegister() {
+      if (!this.registerForm.name.trim() || !this.registerForm.phone.trim() || !this.registerForm.username.trim()) {
+        this.showToast('Please fill all required fields', 'error');
+        return;
+      }
+      if (!this.registerForm.bloodGroup) {
+        this.showToast('Please select your blood group', 'error');
+        return;
+      }
+      if (!this.registerForm.district) {
+        this.showToast('Please select your district', 'error');
+        return;
+      }
+      if (this.usernameStatus === 'taken') {
+        this.showToast('Username already taken', 'error');
+        return;
+      }
+      
+      this.currentUser = {
+        ...this.currentUser,
+        name: this.registerForm.name,
+        username: this.registerForm.username,
+        phone: this.registerForm.phone,
+        bloodGroup: this.registerForm.bloodGroup,
+        village: this.registerForm.village || 'Not specified',
+        union: this.registerForm.union || 'Not specified',
+        district: this.registerForm.district,
+        available: this.registerForm.available,
+        donations: []
+      };
+      
+      this.showToast('Profile created successfully', 'success');
+      this.activeTab = 'home';
+      this.view = 'directory';
+      this.registerForm = { name: '', phone: '', username: '', district: '', union: '', village: '', bloodGroup: '', available: true };
+    },
+    
+    openDonor(id) {
+      this.selectedDonorId = id;
+      this.view = 'donorProfile';
+      window.scrollTo(0, 0);
+    },
+    
+    callDonor(phone) {
+      this.callPhoneNumber = phone;
+      this.callConfirmOpen = true;
+    },
+    
+    clearSearch() {
+      this.searchQuery = '';
+      this.clearFilters();
+    },
+    
+    clearFilters() {
+      this.filters = { bloodGroup: 'all', availability: 'all', district: 'all', donationStatus: 'all' };
+      this.showToast('Filters cleared', 'info');
+    },
+    
+    openEditProfile() {
+      this.editForm = JSON.parse(JSON.stringify(this.currentUser));
+      this.view = 'editProfile';
+      window.scrollTo(0, 0);
+    },
+    
+    saveProfile() {
+      this.currentUser = { ...this.currentUser, ...this.editForm };
+      this.showToast('Profile updated successfully', 'success');
+      this.view = 'myProfile';
+      window.scrollTo(0, 0);
+    },
+    
+    toggleAvailability() {
+      this.currentUser.available = !this.currentUser.available;
+      if (this.currentUser.available) this.currentUser.unavailableReason = '';
+      this.showToast(this.currentUser.available ? 'You are now available' : 'You are now unavailable', 'info');
+    },
+    
+    saveDonation() {
+      if (!this.newDonation.date || !this.newDonation.location) {
+        this.showToast('Please fill required fields', 'error');
+        return;
+      }
+      const donation = {
+        id: Date.now(),
+        date: this.newDonation.date,
+        location: this.newDonation.location,
+        type: this.newDonation.type,
+        hospital: this.newDonation.hospital,
+        notes: this.newDonation.notes,
+        status: 'Completed'
+      };
+      this.currentUser.donations.unshift(donation);
+      this.currentUser.donations.sort((a, b) => new Date(b.date) - new Date(a.date));
+      this.addDonationOpen = false;
+      this.newDonation = { date: '', location: '', type: 'Whole Blood', hospital: '', notes: '' };
+      this.showToast('Donation record added', 'success');
+    },
+    
+    logout() {
+      this.logoutConfirmOpen = true;
+    },
+    
+    confirmLogout() {
+      this.logoutConfirmOpen = false;
+      this.view = 'splash';
+      this.activeTab = 'home';
+      this.searchQuery = '';
+      this.clearFilters();
+      this.showToast('Logged out successfully', 'info');
+    },
+    
+    showToast(message, type = 'success') {
+      clearTimeout(this.toastTimer);
+      this.toast = { show: true, message, type };
+      this.toastTimer = setTimeout(() => { this.toast.show = false; }, 2800);
+    },
+    
+    initials(name) {
+      if (!name) return '?';
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    },
+    
+    avatarColor(name) {
+      if (!name) return 'avatar-a';
+      const colors = ['avatar-a', 'avatar-b', 'avatar-c', 'avatar-d'];
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return colors[Math.abs(hash) % colors.length];
+    },
+    
+    formatDate(dateStr) {
+      if (!dateStr) return '';
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const d = new Date(dateStr);
+      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    },
+    
+    formatDonationStatus(s) {
+      const map = { never: 'Never Donated', recent: 'Recently Donated', before: 'Donated Before' };
+      return map[s] || s;
+    }
+  };
+}
+</script>
+
+</body>
+</html>
