@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Droplet, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import BottomSheet from '@/components/donor/bottom-sheet';
 import DonorAvatar from '@/components/donor/donor-avatar';
@@ -83,26 +83,7 @@ export default function DonorsIndex({ donors, filters, stats, upazilas, unions, 
     });
     const [sheetUpazilaId, setSheetUpazilaId] = useState('all');
     const [filterOpen, setFilterOpen] = useState(false);
-    const [groupOpen, setGroupOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const groupRef = useRef<HTMLDivElement | null>(null);
-
-    // Close the blood-group popover when clicking outside it
-    useEffect(() => {
-        if (!groupOpen) {
-            return;
-        }
-
-        const onClickOutside = (event: MouseEvent) => {
-            if (groupRef.current && !groupRef.current.contains(event.target as Node)) {
-                setGroupOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', onClickOutside);
-
-        return () => document.removeEventListener('mousedown', onClickOutside);
-    }, [groupOpen]);
 
     // Skeleton rows while a search/filter/pagination visit is in flight
     useEffect(() => {
@@ -287,67 +268,6 @@ export default function DonorsIndex({ donors, filters, stats, upazilas, unions, 
                                 </span>
                             )}
                         </button>
-
-                        {/* Compact blood-group picker beside the Filter button */}
-                        <div className="relative" ref={groupRef}>
-                            <button
-                                type="button"
-                                onClick={() => setGroupOpen((open) => !open)}
-                                aria-label="Filter by blood group"
-                                aria-expanded={groupOpen}
-                                className={cn(
-                                    'flex items-center gap-1 rounded-lg border px-3 text-[13px] font-medium',
-                                    current.blood_group !== 'all'
-                                        ? 'border-blood bg-blood text-white'
-                                        : 'border-line bg-white text-ink hover:bg-line-soft',
-                                )}
-                            >
-                                <Droplet className="h-4 w-4 fill-current" aria-hidden="true" />
-                                <span className="font-mono font-bold">
-                                    {current.blood_group === 'all' ? 'All' : current.blood_group}
-                                </span>
-                            </button>
-
-                            {groupOpen && (
-                                <div className="absolute right-0 z-30 mt-1.5 w-44 rounded-xl border border-line bg-white p-2 shadow-lg">
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setGroupOpen(false);
-                                                applyFilters({ ...current, blood_group: 'all' });
-                                            }}
-                                            className={cn(
-                                                'rounded-md border py-2 text-[12.5px] font-semibold',
-                                                current.blood_group === 'all'
-                                                    ? 'border-blood bg-blood text-white'
-                                                    : 'border-line bg-white text-ink',
-                                            )}
-                                        >
-                                            All
-                                        </button>
-                                        {BLOOD_GROUPS.map((group) => (
-                                            <button
-                                                key={group}
-                                                type="button"
-                                                onClick={() => {
-                                                    setGroupOpen(false);
-                                                    applyFilters({ ...current, blood_group: group });
-                                                }}
-                                                className={cn(
-                                                    'rounded-md border py-2 font-mono text-[12.5px] font-bold',
-                                                    current.blood_group === group
-                                                        ? 'border-blood bg-blood text-white'
-                                                        : 'border-line bg-white text-ink',
-                                                )}
-                                            >
-                                                {group}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
                     </div>
                 </div>
 
