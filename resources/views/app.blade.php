@@ -19,14 +19,39 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Inline style: background color + Chrome/Edge autofill fix --}}
         <style>
             html {
                 background-color: oklch(1 0 0);
+                color-scheme: light;
             }
 
             html.dark {
                 background-color: oklch(0.145 0 0);
+                color-scheme: dark;
+            }
+
+            /* NOTE: the donor app shell (.donor-shell) is a light-only design.
+               Its light colors are pinned in resources/css/app.css so that a
+               dark-mode OS/browser (html.dark) can no longer turn its text
+               white-on-white — that was why headers and typed input text were
+               invisible in Chrome/Edge but fine in Brave (light mode). */
+
+            /* Chrome/Edge autofill paints its own box over the field — keep the
+               (always light) donor shell fields readable */
+            .donor-shell input:-webkit-autofill,
+            .donor-shell input:-webkit-autofill:hover,
+            .donor-shell input:-webkit-autofill:focus,
+            .donor-shell textarea:-webkit-autofill,
+            .donor-shell textarea:-webkit-autofill:hover,
+            .donor-shell textarea:-webkit-autofill:focus,
+            .donor-shell select:-webkit-autofill,
+            .donor-shell select:-webkit-autofill:hover,
+            .donor-shell select:-webkit-autofill:focus {
+                -webkit-text-fill-color: #1f2937 !important;
+                -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+                caret-color: #1f2937 !important;
+                transition: background-color 9999s ease-in-out 0s !important;
             }
         </style>
 

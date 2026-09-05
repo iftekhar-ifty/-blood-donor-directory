@@ -232,6 +232,30 @@
     min-height: 100vh;
     position: relative;
     background: var(--color-page);
+
+    /* The donor app is a light-only design. When the browser/OS is in dark
+       mode, html gets the .dark class and these tokens flip to near-white —
+       white text on the white cards (invisible in Chrome/Edge dark mode).
+       Pin the shell to the light values so text always stays readable. */
+    color-scheme: light;
+    color: var(--color-ink);
+    --color-background: oklch(1 0 0);
+    --color-foreground: oklch(0.145 0 0);
+    --color-card: oklch(1 0 0);
+    --color-card-foreground: oklch(0.145 0 0);
+    --color-popover: oklch(1 0 0);
+    --color-popover-foreground: oklch(0.145 0 0);
+    --color-primary: oklch(0.205 0 0);
+    --color-primary-foreground: oklch(0.985 0 0);
+    --color-secondary: oklch(0.97 0 0);
+    --color-secondary-foreground: oklch(0.205 0 0);
+    --color-muted: oklch(0.97 0 0);
+    --color-muted-foreground: oklch(0.556 0 0);
+    --color-accent: oklch(0.97 0 0);
+    --color-accent-foreground: oklch(0.205 0 0);
+    --color-border: oklch(0.922 0 0);
+    --color-input: oklch(0.922 0 0);
+    --color-ring: oklch(0.87 0 0);
 }
 
 @media (min-width: 768px) {
